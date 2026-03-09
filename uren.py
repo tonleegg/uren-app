@@ -2,9 +2,9 @@ import gspread
 import streamlit as st
 import pandas as pd
 from datetime import date
+from streamlit_searchbox import st_searchbox
 
 KOLOMMEN = ["klant", "projectomschrijving", "datum", "uren", "uurtarief"]
-NIEUW_ITEM = "— Nieuwe waarde invoeren —"
 
 CSS = """
 <style>
@@ -199,16 +199,27 @@ def verwijder_rij(idx: int) -> None:
     laad_data.clear()
 
 
+def zoek_klanten(term: str) -> list:
+    klanten = laad_suggesties()["klanten"]
+    if not term:
+        return klanten
+    return [k for k in klanten if term.lower() in k.lower()]
+
+
+def zoek_projecten(term: str) -> list:
+    projecten = laad_suggesties()["projecten"]
+    if not term:
+        return projecten
+    return [p for p in projecten if term.lower() in p.lower()]
+
 
 # ── Pagina-config ──────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Urenregistratie", page_icon="⏱️", layout="centered")
 st.markdown(CSS, unsafe_allow_html=True)
 st.title("Urenregistratie")
 
-suggesties = laad_suggesties()
-klanten_opties = suggesties["klanten"]
-projecten_opties = suggesties["projecten"]
 bewerkregel = st.session_state.get("bewerkregel")
+save_cnt = st.session_state.get("save_cnt", 0)
 
 # ── Formulier: nieuw of bewerken ───────────────────────────────────────────────
 if bewerkregel is not None:
@@ -218,27 +229,28 @@ if bewerkregel is not None:
         st.rerun()
     rij = df_all.iloc[bewerkregel]
 
-    # Zorg dat de huidige waarde altijd in de optielijst staat
-    klanten_edit = klanten_opties if rij["klant"] in klanten_opties else [rij["klant"]] + klanten_opties
-    projecten_edit = projecten_opties if rij["projectomschrijving"] in projecten_opties else [rij["projectomschrijving"]] + projecten_opties
-
     st.markdown("### Regel bewerken")
+    col1, col2 = st.columns(2)
+    with col1:
+        klant_waarde_edit = st_searchbox(
+            zoek_klanten,
+            key=f"klant_sb_edit_{bewerkregel}",
+            placeholder="Zoek of typ een klant...",
+            label="Klant",
+            default=rij["klant"],
+            default_use_searchterm=True,
+        )
+    with col2:
+        project_waarde_edit = st_searchbox(
+            zoek_projecten,
+            key=f"project_sb_edit_{bewerkregel}",
+            placeholder="Zoek of typ een omschrijving...",
+            label="Projectomschrijving",
+            default=rij["projectomschrijving"],
+            default_use_searchterm=True,
+        )
+
     with st.form("bewerk_formulier", clear_on_submit=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            klant_keuze_edit = st.selectbox("Klant", klanten_edit + [NIEUW_ITEM],
-                                            index=klanten_edit.index(rij["klant"]))
-            if klant_keuze_edit == NIEUW_ITEM:
-                klant_waarde_edit = st.text_input("Nieuwe klantnaam")
-            else:
-                klant_waarde_edit = klant_keuze_edit
-        with col2:
-            project_keuze_edit = st.selectbox("Projectomschrijving", projecten_edit + [NIEUW_ITEM],
-                                              index=projecten_edit.index(rij["projectomschrijving"]))
-            if project_keuze_edit == NIEUW_ITEM:
-                project_waarde_edit = st.text_input("Nieuwe projectomschrijving")
-            else:
-                project_waarde_edit = project_keuze_edit
         datum_edit = st.date_input("Datum", value=pd.to_datetime(rij["datum"]).date())
         uren_edit = st.number_input("Uren", min_value=0.0, value=float(rij["uren"]), step=0.5, format="%.1f")
         uurtarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["uurtarief"]), step=1.0, format="%.2f")
@@ -273,20 +285,25 @@ if bewerkregel is not None:
 
 else:
     st.markdown("### Nieuwe regel invoeren")
+    col1, col2 = st.columns(2)
+    with col1:
+        klant_waarde = st_searchbox(
+            zoek_klanten,
+            key=f"klant_sb_nieuw_{save_cnt}",
+            placeholder="Zoek of typ een klant...",
+            label="Klant",
+            default_use_searchterm=True,
+        )
+    with col2:
+        project_waarde = st_searchbox(
+            zoek_projecten,
+            key=f"project_sb_nieuw_{save_cnt}",
+            placeholder="Zoek of typ een omschrijving...",
+            label="Projectomschrijving",
+            default_use_searchterm=True,
+        )
+
     with st.form("uren_formulier", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            klant_keuze = st.selectbox("Klant", klanten_opties + [NIEUW_ITEM])
-            if klant_keuze == NIEUW_ITEM:
-                klant_waarde = st.text_input("Nieuwe klantnaam")
-            else:
-                klant_waarde = klant_keuze
-        with col2:
-            project_keuze = st.selectbox("Projectomschrijving", projecten_opties + [NIEUW_ITEM])
-            if project_keuze == NIEUW_ITEM:
-                project_waarde = st.text_input("Nieuwe projectomschrijving")
-            else:
-                project_waarde = project_keuze
         datum = st.date_input("Datum", value=date.today())
         uren = st.number_input("Uren", min_value=0.0, step=0.5, format="%.1f")
         uurtarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
@@ -309,6 +326,7 @@ else:
                 "uren": uren,
                 "uurtarief": uurtarief,
             })
+            st.session_state["save_cnt"] = save_cnt + 1
             st.success(f"Opgeslagen: {uren}u voor {klant}")
             st.rerun()
 
