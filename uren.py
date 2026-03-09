@@ -1,12 +1,9 @@
-import json
-import os
+import gspread
 import streamlit as st
 import pandas as pd
 from datetime import date
 from streamlit_searchbox import st_searchbox
 
-CSV_PAD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uren.csv")
-SUGGESTIES_PAD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "suggesties.json")
 KOLOMMEN = ["klant", "projectomschrijving", "datum", "uren", "uurtarief"]
 
 CSS = """
@@ -159,41 +156,43 @@ hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !imp
 """
 
 
+@st.cache_resource
+def get_sheet():
+    client = gspread.service_account_from_dict(dict(st.secrets["gcp_service_account"]))
+    sheet = client.open_by_key(st.secrets["SHEET_ID"]).sheet1
+    if not sheet.get_all_values():
+        sheet.append_row(KOLOMMEN)
+    return sheet
+
+
 def laad_data() -> pd.DataFrame:
-    if os.path.exists(CSV_PAD):
-        return pd.read_csv(CSV_PAD)
+    records = get_sheet().get_all_records()
+    if records:
+        return pd.DataFrame(records)
     return pd.DataFrame(columns=KOLOMMEN)
 
 
 def laad_suggesties() -> dict:
-    if os.path.exists(SUGGESTIES_PAD):
-        with open(SUGGESTIES_PAD, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"klanten": [], "projecten": []}
-
-
-def sla_suggesties_op(klant: str, project: str) -> None:
-    suggesties = laad_suggesties()
-    if klant and klant not in suggesties["klanten"]:
-        suggesties["klanten"].append(klant)
-        suggesties["klanten"].sort()
-    if project and project not in suggesties["projecten"]:
-        suggesties["projecten"].append(project)
-        suggesties["projecten"].sort()
-    with open(SUGGESTIES_PAD, "w", encoding="utf-8") as f:
-        json.dump(suggesties, f, ensure_ascii=False, indent=2)
+    df = laad_data()
+    if df.empty:
+        return {"klanten": [], "projecten": []}
+    return {
+        "klanten": sorted(df["klant"].dropna().unique().tolist()),
+        "projecten": sorted(df["projectomschrijving"].dropna().unique().tolist()),
+    }
 
 
 def sla_op(rij: dict) -> None:
-    df = laad_data()
-    df = pd.concat([df, pd.DataFrame([rij])], ignore_index=True)
-    df.to_csv(CSV_PAD, index=False)
+    get_sheet().append_row([rij[k] for k in KOLOMMEN])
+
+
+def bewerk_rij(idx: int, rij: dict) -> None:
+    row_num = idx + 2  # +1 voor header, +1 voor 1-gebaseerde index
+    get_sheet().update(f"A{row_num}:E{row_num}", [[rij[k] for k in KOLOMMEN]])
 
 
 def verwijder_rij(idx: int) -> None:
-    df = laad_data()
-    df = df.drop(index=idx).reset_index(drop=True)
-    df.to_csv(CSV_PAD, index=False)
+    get_sheet().delete_rows(idx + 2)  # +1 voor header, +1 voor 1-gebaseerde index
 
 
 def zoek_klanten(term: str) -> list:
@@ -272,13 +271,13 @@ if bewerkregel is not None:
         elif uren_edit <= 0:
             st.error("Uren moet groter zijn dan 0.")
         else:
-            df_all.at[bewerkregel, "klant"] = klant_edit
-            df_all.at[bewerkregel, "projectomschrijving"] = omschrijving_edit
-            df_all.at[bewerkregel, "datum"] = datum_edit.strftime("%Y-%m-%d")
-            df_all.at[bewerkregel, "uren"] = uren_edit
-            df_all.at[bewerkregel, "uurtarief"] = uurtarief_edit
-            df_all.to_csv(CSV_PAD, index=False)
-            sla_suggesties_op(klant_edit, omschrijving_edit)
+            bewerk_rij(bewerkregel, {
+                "klant": klant_edit,
+                "projectomschrijving": omschrijving_edit,
+                "datum": datum_edit.strftime("%Y-%m-%d"),
+                "uren": uren_edit,
+                "uurtarief": uurtarief_edit,
+            })
             st.session_state.bewerkregel = None
             st.success("Wijzigingen opgeslagen.")
             st.rerun()
@@ -327,7 +326,6 @@ else:
                 "uren": uren,
                 "uurtarief": uurtarief,
             })
-            sla_suggesties_op(klant, omschrijving)
             st.session_state["save_cnt"] = save_cnt + 1
             st.success(f"Opgeslagen: {uren}u voor {klant}")
             st.rerun()
