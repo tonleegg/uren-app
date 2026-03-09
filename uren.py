@@ -165,6 +165,7 @@ def get_sheet():
     return sheet
 
 
+@st.cache_data(ttl=60)
 def laad_data() -> pd.DataFrame:
     records = get_sheet().get_all_records()
     if records:
@@ -184,15 +185,18 @@ def laad_suggesties() -> dict:
 
 def sla_op(rij: dict) -> None:
     get_sheet().append_row([rij[k] for k in KOLOMMEN])
+    laad_data.clear()
 
 
 def bewerk_rij(idx: int, rij: dict) -> None:
     row_num = idx + 2  # +1 voor header, +1 voor 1-gebaseerde index
     get_sheet().update(f"A{row_num}:E{row_num}", [[rij[k] for k in KOLOMMEN]])
+    laad_data.clear()
 
 
 def verwijder_rij(idx: int) -> None:
     get_sheet().delete_rows(idx + 2)  # +1 voor header, +1 voor 1-gebaseerde index
+    laad_data.clear()
 
 
 def zoek_klanten(term: str) -> list:
