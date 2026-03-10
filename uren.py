@@ -218,6 +218,17 @@ def zoek_projecten(term: str) -> list:
 # ── Pagina-config ──────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Urenregistratie", page_icon="⏱️", layout="centered")
 st.markdown(CSS, unsafe_allow_html=True)
+
+if not st.user.is_logged_in:
+    st.title("Urenregistratie")
+    st.info("Log in met je Google-account om verder te gaan.")
+    st.button("Inloggen met Google", on_click=st.login, args=("google",), type="primary")
+    st.stop()
+
+with st.sidebar:
+    st.markdown(f"Ingelogd als **{st.user.name}**")
+    st.button("Uitloggen", on_click=st.logout)
+
 st.title("Urenregistratie")
 
 bewerkregel = st.session_state.get("bewerkregel")
