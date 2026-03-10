@@ -227,8 +227,8 @@ def verifieer_login(gebruikersnaam: str, wachtwoord: str):
     gebruikers = laad_gebruikers()
     if gebruikersnaam not in gebruikers:
         return None
-    opgeslagen_hash = gebruikers[gebruikersnaam]["hash"].encode()
-    if bcrypt.checkpw(wachtwoord.encode(), opgeslagen_hash):
+    opgeslagen_hash = gebruikers[gebruikersnaam]["hash"].encode("utf-8")
+    if bcrypt.checkpw(wachtwoord.encode("utf-8"), opgeslagen_hash):
         return gebruikers[gebruikersnaam]["naam"]
     return None
 
