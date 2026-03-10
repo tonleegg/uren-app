@@ -175,12 +175,11 @@ def get_sheet():
 @st.cache_resource
 def get_users_sheet():
     spreadsheet = get_spreadsheet()
-    try:
-        return spreadsheet.worksheet("gebruikers")
-    except gspread.WorksheetNotFound:
+    bestaande_namen = [ws.title for ws in spreadsheet.worksheets()]
+    if "gebruikers" not in bestaande_namen:
         sheet = spreadsheet.add_worksheet("gebruikers", rows=100, cols=3)
         sheet.append_row(["gebruikersnaam", "wachtwoord_hash", "naam"])
-        return sheet
+    return spreadsheet.worksheet("gebruikers")
 
 
 @st.cache_data(ttl=60)
