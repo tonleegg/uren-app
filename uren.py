@@ -1,6 +1,6 @@
+import bcrypt
 import gspread
 import streamlit as st
-import streamlit_authenticator as stauth
 import pandas as pd
 from datetime import date, datetime
 from streamlit_searchbox import st_searchbox
@@ -159,12 +159,28 @@ hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !imp
 
 
 @st.cache_resource
-def get_sheet():
+def get_spreadsheet():
     client = gspread.service_account_from_dict(dict(st.secrets["gcp_service_account"]))
-    sheet = client.open_by_key(st.secrets["SHEET_ID"]).sheet1
+    return client.open_by_key(st.secrets["SHEET_ID"])
+
+
+@st.cache_resource
+def get_sheet():
+    sheet = get_spreadsheet().sheet1
     if not sheet.get_all_values():
         sheet.append_row(ALLE_KOLOMMEN)
     return sheet
+
+
+@st.cache_resource
+def get_users_sheet():
+    spreadsheet = get_spreadsheet()
+    try:
+        return spreadsheet.worksheet("gebruikers")
+    except gspread.WorksheetNotFound:
+        sheet = spreadsheet.add_worksheet("gebruikers", rows=100, cols=3)
+        sheet.append_row(["gebruikersnaam", "wachtwoord_hash", "naam"])
+        return sheet
 
 
 @st.cache_data(ttl=60)
@@ -202,6 +218,22 @@ def verwijder_rij(idx: int) -> None:
     laad_data.clear()
 
 
+@st.cache_data(ttl=300)
+def laad_gebruikers() -> dict:
+    records = get_users_sheet().get_all_records()
+    return {r["gebruikersnaam"]: {"hash": r["wachtwoord_hash"], "naam": r["naam"]} for r in records}
+
+
+def verifieer_login(gebruikersnaam: str, wachtwoord: str):
+    gebruikers = laad_gebruikers()
+    if gebruikersnaam not in gebruikers:
+        return None
+    opgeslagen_hash = gebruikers[gebruikersnaam]["hash"].encode()
+    if bcrypt.checkpw(wachtwoord.encode(), opgeslagen_hash):
+        return gebruikers[gebruikersnaam]["naam"]
+    return None
+
+
 def zoek_klanten(term: str) -> list:
     klanten = laad_suggesties()["klanten"]
     if not term:
@@ -220,25 +252,28 @@ def zoek_projecten(term: str) -> list:
 st.set_page_config(page_title="Urenregistratie", page_icon="⏱️", layout="centered")
 st.markdown(CSS, unsafe_allow_html=True)
 
-authenticator = stauth.Authenticate(
-    dict(st.secrets["credentials"]),
-    st.secrets["cookie"]["name"],
-    st.secrets["cookie"]["key"],
-    int(st.secrets["cookie"]["expiry_days"]),
-)
-
-authenticator.login()
-
-if st.session_state.get("authentication_status") is False:
-    st.error("Gebruikersnaam of wachtwoord onjuist.")
-    st.stop()
-elif st.session_state.get("authentication_status") is None:
+if not st.session_state.get("ingelogd"):
     st.title("Urenregistratie")
+    with st.form("login_formulier"):
+        gebruikersnaam_input = st.text_input("Gebruikersnaam")
+        wachtwoord_input = st.text_input("Wachtwoord", type="password")
+        inloggen = st.form_submit_button("Inloggen", type="primary")
+    if inloggen:
+        naam = verifieer_login(gebruikersnaam_input.strip(), wachtwoord_input)
+        if naam:
+            st.session_state["ingelogd"] = True
+            st.session_state["gebruiker_naam"] = naam
+            st.rerun()
+        else:
+            st.error("Gebruikersnaam of wachtwoord onjuist.")
     st.stop()
 
 with st.sidebar:
-    st.markdown(f"Ingelogd als **{st.session_state['name']}**")
-    authenticator.logout("Uitloggen", location="sidebar")
+    st.markdown(f"Ingelogd als **{st.session_state['gebruiker_naam']}**")
+    if st.button("Uitloggen"):
+        st.session_state["ingelogd"] = False
+        st.session_state["gebruiker_naam"] = None
+        st.rerun()
 
 st.title("Urenregistratie")
 
