@@ -1,10 +1,11 @@
 import gspread
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 from streamlit_searchbox import st_searchbox
 
 KOLOMMEN = ["klant", "projectomschrijving", "datum", "uren", "uurtarief"]
+ALLE_KOLOMMEN = KOLOMMEN + ["timestamp"]
 
 CSS = """
 <style>
@@ -161,7 +162,7 @@ def get_sheet():
     client = gspread.service_account_from_dict(dict(st.secrets["gcp_service_account"]))
     sheet = client.open_by_key(st.secrets["SHEET_ID"]).sheet1
     if not sheet.get_all_values():
-        sheet.append_row(KOLOMMEN)
+        sheet.append_row(ALLE_KOLOMMEN)
     return sheet
 
 
@@ -184,7 +185,8 @@ def laad_suggesties() -> dict:
 
 
 def sla_op(rij: dict) -> None:
-    get_sheet().append_row([rij[k] for k in KOLOMMEN])
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    get_sheet().append_row([rij[k] for k in KOLOMMEN] + [timestamp])
     laad_data.clear()
 
 
