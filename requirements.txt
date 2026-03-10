@@ -1,5 +1,5 @@
-authlib>=1.3.2
 gspread
+streamlit-authenticator==0.3.3
 oauth2client
 pandas==2.3.3
 requests==2.32.5

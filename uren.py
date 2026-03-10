@@ -1,5 +1,6 @@
 import gspread
 import streamlit as st
+import streamlit_authenticator as stauth
 import pandas as pd
 from datetime import date, datetime
 from streamlit_searchbox import st_searchbox
@@ -219,15 +220,25 @@ def zoek_projecten(term: str) -> list:
 st.set_page_config(page_title="Urenregistratie", page_icon="⏱️", layout="centered")
 st.markdown(CSS, unsafe_allow_html=True)
 
-if not st.user.is_logged_in:
+authenticator = stauth.Authenticate(
+    dict(st.secrets["credentials"]),
+    st.secrets["cookie"]["name"],
+    st.secrets["cookie"]["key"],
+    int(st.secrets["cookie"]["expiry_days"]),
+)
+
+authenticator.login()
+
+if st.session_state.get("authentication_status") is False:
+    st.error("Gebruikersnaam of wachtwoord onjuist.")
+    st.stop()
+elif st.session_state.get("authentication_status") is None:
     st.title("Urenregistratie")
-    st.info("Log in met je Google-account om verder te gaan.")
-    st.button("Inloggen met Google", on_click=st.login, kwargs={"provider": "google"}, type="primary")
     st.stop()
 
 with st.sidebar:
-    st.markdown(f"Ingelogd als **{st.user.name}**")
-    st.button("Uitloggen", on_click=st.logout)
+    st.markdown(f"Ingelogd als **{st.session_state['name']}**")
+    authenticator.logout("Uitloggen", location="sidebar")
 
 st.title("Urenregistratie")
 
