@@ -253,6 +253,7 @@ st.markdown(CSS, unsafe_allow_html=True)
 
 if not st.session_state.get("ingelogd"):
     st.title("Urenregistratie")
+    st.write("DEBUG gebruikers:", list(laad_gebruikers().keys()))
     with st.form("login_formulier"):
         gebruikersnaam_input = st.text_input("Gebruikersnaam")
         wachtwoord_input = st.text_input("Wachtwoord", type="password")
