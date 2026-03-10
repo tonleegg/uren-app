@@ -222,7 +222,7 @@ st.markdown(CSS, unsafe_allow_html=True)
 if not st.user.is_logged_in:
     st.title("Urenregistratie")
     st.info("Log in met je Google-account om verder te gaan.")
-    st.button("Inloggen met Google", on_click=st.login, args=("google",), type="primary")
+    st.button("Inloggen met Google", on_click=st.login, kwargs={"provider": "google"}, type="primary")
     st.stop()
 
 with st.sidebar:
