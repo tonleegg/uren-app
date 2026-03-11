@@ -269,7 +269,7 @@ LOGO_PAD = "daauw kl.png"
 
 if not st.session_state.get("ingelogd"):
     try:
-        st.image(LOGO_PAD, width=300, use_container_width=False)
+        st.image(LOGO_PAD, width=240, use_container_width=False)
     except Exception:
         pass
     st.title("Urenregistratie")
@@ -291,7 +291,7 @@ if not st.session_state.get("ingelogd"):
 
 with st.sidebar:
     try:
-        st.image(LOGO_PAD, width=300, use_container_width=False)
+        st.image(LOGO_PAD, width=240, use_container_width=False)
     except Exception:
         pass
     st.markdown(f"Ingelogd als **{st.session_state['gebruiker_naam']}**")
@@ -303,7 +303,7 @@ with st.sidebar:
         st.rerun()
 
 try:
-    st.image(LOGO_PAD, width=300, use_container_width=False)
+    st.image(LOGO_PAD, width=240, use_container_width=False)
 except Exception:
     pass
 st.title("Urenregistratie")
