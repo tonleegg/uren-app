@@ -29,9 +29,11 @@ def haal_coordinaten(stad):
 
 def haal_weer(lat, lon):
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-    with urllib.request.urlopen(url, context=ssl_context) as r:
+    with urllib.request.urlopen(url) as r:
         data = json.loads(r.read())
     return data["current_weather"]
+
+import urllib.parse
 
 uur = datetime.now().hour
 

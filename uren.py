@@ -1,12 +1,10 @@
-import bcrypt
-import gspread
 import streamlit as st
 import pandas as pd
 from datetime import date, datetime
+from supabase import create_client
 from streamlit_searchbox import st_searchbox
 
 KOLOMMEN = ["klant", "projectomschrijving", "datum", "uren", "uurtarief"]
-ALLE_KOLOMMEN = KOLOMMEN + ["timestamp"]
 
 CSS = """
 <style>
@@ -159,35 +157,16 @@ hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !imp
 
 
 @st.cache_resource
-def get_spreadsheet():
-    client = gspread.service_account_from_dict(dict(st.secrets["gcp_service_account"]))
-    return client.open_by_key(st.secrets["SHEET_ID"])
-
-
-@st.cache_resource
-def get_sheet():
-    sheet = get_spreadsheet().sheet1
-    if not sheet.get_all_values():
-        sheet.append_row(ALLE_KOLOMMEN)
-    return sheet
-
-
-@st.cache_resource
-def get_users_sheet():
-    spreadsheet = get_spreadsheet()
-    bestaande_namen = [ws.title for ws in spreadsheet.worksheets()]
-    if "gebruikers" not in bestaande_namen:
-        sheet = spreadsheet.add_worksheet("gebruikers", rows=100, cols=3)
-        sheet.append_row(["gebruikersnaam", "wachtwoord_hash", "naam"])
-    return spreadsheet.worksheet("gebruikers")
+def get_client():
+    return create_client(st.secrets["supabase"]["url"], st.secrets["supabase"]["key"])
 
 
 @st.cache_data(ttl=60)
 def laad_data() -> pd.DataFrame:
-    records = get_sheet().get_all_records()
-    if records:
-        return pd.DataFrame(records)
-    return pd.DataFrame(columns=KOLOMMEN)
+    res = get_client().table("uren").select("*").order("datum").execute()
+    if res.data:
+        return pd.DataFrame(res.data)
+    return pd.DataFrame(columns=["id"] + KOLOMMEN + ["timestamp"])
 
 
 def laad_suggesties() -> dict:
@@ -201,36 +180,27 @@ def laad_suggesties() -> dict:
 
 
 def sla_op(rij: dict) -> None:
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    get_sheet().append_row([rij[k] for k in KOLOMMEN] + [timestamp])
+    rij["timestamp"] = datetime.now().isoformat()
+    get_client().table("uren").insert(rij).execute()
     laad_data.clear()
 
 
-def bewerk_rij(idx: int, rij: dict) -> None:
-    row_num = idx + 2  # +1 voor header, +1 voor 1-gebaseerde index
-    get_sheet().update(f"A{row_num}:E{row_num}", [[rij[k] for k in KOLOMMEN]])
+def bewerk_rij(rij_id: int, rij: dict) -> None:
+    get_client().table("uren").update(rij).eq("id", rij_id).execute()
     laad_data.clear()
 
 
-def verwijder_rij(idx: int) -> None:
-    get_sheet().delete_rows(idx + 2)  # +1 voor header, +1 voor 1-gebaseerde index
+def verwijder_rij(rij_id: int) -> None:
+    get_client().table("uren").delete().eq("id", rij_id).execute()
     laad_data.clear()
 
 
-@st.cache_data(ttl=300)
-def laad_gebruikers() -> dict:
-    records = get_users_sheet().get_all_records()
-    return {r["gebruikersnaam"]: {"hash": r["wachtwoord_hash"], "naam": r["naam"]} for r in records}
-
-
-def verifieer_login(gebruikersnaam: str, wachtwoord: str):
-    gebruikers = laad_gebruikers()
-    if gebruikersnaam not in gebruikers:
+def login(email: str, wachtwoord: str):
+    try:
+        res = get_client().auth.sign_in_with_password({"email": email, "password": wachtwoord})
+        return res.user
+    except Exception:
         return None
-    opgeslagen_hash = gebruikers[gebruikersnaam]["hash"].encode("utf-8")
-    if bcrypt.checkpw(wachtwoord.encode("utf-8"), opgeslagen_hash):
-        return gebruikers[gebruikersnaam]["naam"]
-    return None
 
 
 def zoek_klanten(term: str) -> list:
@@ -254,24 +224,28 @@ st.markdown(CSS, unsafe_allow_html=True)
 if not st.session_state.get("ingelogd"):
     st.title("Urenregistratie")
     with st.form("login_formulier"):
-        gebruikersnaam_input = st.text_input("Gebruikersnaam")
+        email_input = st.text_input("E-mailadres")
         wachtwoord_input = st.text_input("Wachtwoord", type="password")
         inloggen = st.form_submit_button("Inloggen", type="primary")
     if inloggen:
-        naam = verifieer_login(gebruikersnaam_input.strip(), wachtwoord_input)
-        if naam:
+        user = login(email_input.strip(), wachtwoord_input)
+        if user:
             st.session_state["ingelogd"] = True
+            st.session_state["gebruiker_email"] = user.email
+            naam = (user.user_metadata or {}).get("full_name") or user.email
             st.session_state["gebruiker_naam"] = naam
             st.rerun()
         else:
-            st.error("Gebruikersnaam of wachtwoord onjuist.")
+            st.error("E-mailadres of wachtwoord onjuist.")
     st.stop()
 
 with st.sidebar:
     st.markdown(f"Ingelogd als **{st.session_state['gebruiker_naam']}**")
     if st.button("Uitloggen"):
+        get_client().auth.sign_out()
         st.session_state["ingelogd"] = False
         st.session_state["gebruiker_naam"] = None
+        st.session_state["gebruiker_email"] = None
         st.rerun()
 
 st.title("Urenregistratie")
@@ -282,10 +256,11 @@ save_cnt = st.session_state.get("save_cnt", 0)
 # ── Formulier: nieuw of bewerken ───────────────────────────────────────────────
 if bewerkregel is not None:
     df_all = laad_data()
-    if bewerkregel >= len(df_all):
+    rij_match = df_all[df_all["id"] == bewerkregel]
+    if rij_match.empty:
         st.session_state.bewerkregel = None
         st.rerun()
-    rij = df_all.iloc[bewerkregel]
+    rij = rij_match.iloc[0]
 
     st.markdown("### Regel bewerken")
     col1, col2 = st.columns(2)
@@ -410,7 +385,8 @@ else:
             proj_uren = proj_df["uren"].sum()
             proj_bedrag = proj_df["totaalbedrag"].sum()
 
-            for idx, row in proj_df.iterrows():
+            for _, row in proj_df.iterrows():
+                rij_id = row["id"]
                 datum_str = pd.to_datetime(row["datum"]).strftime("%d %B %Y").lstrip("0")
                 bedrag = row["totaalbedrag"]
 
@@ -429,12 +405,12 @@ else:
                     )
                 with btn_col:
                     st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
-                    if st.button("✏️", key=f"edit_{idx}", help="Bewerken", use_container_width=True):
-                        st.session_state.bewerkregel = idx
+                    if st.button("✏️", key=f"edit_{rij_id}", help="Bewerken", use_container_width=True):
+                        st.session_state.bewerkregel = rij_id
                         st.rerun()
-                    if st.button("🗑️", key=f"del_{idx}", help="Verwijderen", use_container_width=True):
-                        verwijder_rij(idx)
-                        if st.session_state.get("bewerkregel") == idx:
+                    if st.button("🗑️", key=f"del_{rij_id}", help="Verwijderen", use_container_width=True):
+                        verwijder_rij(rij_id)
+                        if st.session_state.get("bewerkregel") == rij_id:
                             st.session_state.bewerkregel = None
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
