@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import date, datetime
 from supabase import create_client
@@ -153,15 +154,41 @@ hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !imp
 
 /* ── Focus-trap (vangt Tab op na laatste invoerveld) ── */
 .focus-trap {
-    overflow: hidden;
-    height: 0;
-    width: 0;
     position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
 }
 </style>
 """
 
 FOCUS_TRAP = '<div class="focus-trap"><input type="text" tabindex="0" aria-hidden="true"></div>'
+
+TAB_NAAR_OPSLAAN_JS = """
+<script>
+(function () {
+    function setup() {
+        var doc = window.parent.document;
+        var numInputs = doc.querySelectorAll('[data-testid="stNumberInput"] input');
+        if (!numInputs.length) { setTimeout(setup, 200); return; }
+        var tariefInput = numInputs[numInputs.length - 1];
+        tariefInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                var submitBtn = doc.querySelector('[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"]');
+                if (!submitBtn) submitBtn = doc.querySelector('[data-testid="stFormSubmitButton"] button');
+                if (submitBtn) { e.preventDefault(); submitBtn.focus(); }
+            }
+        });
+    }
+    setup();
+})();
+</script>
+"""
 
 
 @st.cache_resource
@@ -308,6 +335,8 @@ if bewerkregel is not None:
             st.success("Wijzigingen opgeslagen.")
             st.rerun()
 
+    components.html(TAB_NAAR_OPSLAAN_JS, height=0)
+
 else:
     st.markdown("### Nieuwe regel invoeren")
     suggesties = laad_suggesties()
@@ -348,6 +377,8 @@ else:
             st.session_state["save_cnt"] = save_cnt + 1
             st.success(f"Opgeslagen: {uren}u voor {klant}")
             st.rerun()
+
+    components.html(TAB_NAAR_OPSLAAN_JS, height=0)
 
 # ── Overzicht ──────────────────────────────────────────────────────────────────
 st.markdown("<hr style='margin: 1.5rem 0 1rem 0;'>", unsafe_allow_html=True)
