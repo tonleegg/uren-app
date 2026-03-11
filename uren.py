@@ -160,6 +160,17 @@ hr { border-color: #d5d8dc !important; opacity: 1 !important; margin: 6px 0 !imp
     margin-top: 4px;
 }
 
+/* ── Logo-container ── */
+[data-testid="stImage"] {
+    overflow: visible !important;
+    max-width: none !important;
+    padding-right: 1rem !important;
+}
+[data-testid="stImage"] img {
+    max-width: none !important;
+    overflow: visible !important;
+}
+
 /* ── Focus-trap (vangt Tab op na laatste invoerveld) ── */
 .focus-trap {
     position: absolute;
@@ -258,7 +269,7 @@ LOGO_PAD = "daauw kl.png"
 
 if not st.session_state.get("ingelogd"):
     try:
-        st.image(LOGO_PAD, width=200, use_container_width=False)
+        st.image(LOGO_PAD, width=300, use_container_width=False)
     except Exception:
         pass
     st.title("Urenregistratie")
@@ -280,7 +291,7 @@ if not st.session_state.get("ingelogd"):
 
 with st.sidebar:
     try:
-        st.image(LOGO_PAD, width=200, use_container_width=False)
+        st.image(LOGO_PAD, width=300, use_container_width=False)
     except Exception:
         pass
     st.markdown(f"Ingelogd als **{st.session_state['gebruiker_naam']}**")
@@ -292,7 +303,7 @@ with st.sidebar:
         st.rerun()
 
 try:
-    st.image(LOGO_PAD, width=200, use_container_width=False)
+    st.image(LOGO_PAD, width=300, use_container_width=False)
 except Exception:
     pass
 st.title("Urenregistratie")
