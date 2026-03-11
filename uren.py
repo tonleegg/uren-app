@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, datetime
 from supabase import create_client
-KOLOMMEN = ["klant", "projectomschrijving", "datum", "uren", "uurtarief"]
+KOLOMMEN = ["klant", "project", "datum", "uren", "uurtarief"]
 
 CSS = """
 <style>
@@ -173,7 +173,7 @@ def laad_suggesties() -> dict:
         return {"klanten": [], "projecten": []}
     return {
         "klanten": sorted(df["klant"].dropna().unique().tolist()),
-        "projecten": sorted(df["projectomschrijving"].dropna().unique().tolist()),
+        "projecten": sorted(df["project"].dropna().unique().tolist()),
     }
 
 
@@ -264,10 +264,10 @@ if bewerkregel is not None:
         else:
             klant_waarde_edit = klant_keuze_edit
     with col2:
-        project_idx = project_opties_edit.index(rij["projectomschrijving"]) if rij["projectomschrijving"] in project_opties_edit else 0
+        project_idx = project_opties_edit.index(rij["project"]) if rij["project"] in project_opties_edit else 0
         project_keuze_edit = st.selectbox("Projectomschrijving", project_opties_edit, index=project_idx, key=f"project_sb_edit_{bewerkregel}")
         if project_keuze_edit == NIEUW_PROJECT:
-            project_waarde_edit = st.text_input("Nieuwe projectomschrijving", key=f"project_input_edit_{bewerkregel}")
+            project_waarde_edit = st.text_input("Nieuw project", key=f"project_input_edit_{bewerkregel}")
         else:
             project_waarde_edit = project_keuze_edit
 
@@ -289,13 +289,13 @@ if bewerkregel is not None:
         if not klant_edit:
             st.error("Vul een klantnaam in.")
         elif not omschrijving_edit:
-            st.error("Vul een projectomschrijving in.")
+            st.error("Vul een project in.")
         elif uren_edit <= 0:
             st.error("Uren moet groter zijn dan 0.")
         else:
             bewerk_rij(bewerkregel, {
                 "klant": klant_edit,
-                "projectomschrijving": omschrijving_edit,
+                "project": omschrijving_edit,
                 "datum": datum_edit.strftime("%Y-%m-%d"),
                 "uren": uren_edit,
                 "uurtarief": uurtarief_edit,
@@ -320,7 +320,7 @@ else:
     with col2:
         project_keuze = st.selectbox("Projectomschrijving", project_opties, key=f"project_sb_nieuw_{save_cnt}")
         if project_keuze == NIEUW_PROJECT:
-            project_waarde = st.text_input("Nieuwe projectomschrijving", key=f"project_input_nieuw_{save_cnt}")
+            project_waarde = st.text_input("Nieuw project", key=f"project_input_nieuw_{save_cnt}")
         else:
             project_waarde = project_keuze
 
@@ -336,13 +336,13 @@ else:
         if not klant:
             st.error("Vul een klantnaam in of kies er een uit de lijst.")
         elif not omschrijving:
-            st.error("Vul een projectomschrijving in of kies er een uit de lijst.")
+            st.error("Vul een project in of kies er een uit de lijst.")
         elif uren <= 0:
             st.error("Uren moet groter zijn dan 0.")
         else:
             sla_op({
                 "klant": klant,
-                "projectomschrijving": omschrijving,
+                "project": omschrijving,
                 "datum": datum.strftime("%Y-%m-%d"),
                 "uren": uren,
                 "uurtarief": uurtarief,
@@ -369,7 +369,7 @@ else:
 
         st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
 
-        for project, proj_df in klant_df.groupby("projectomschrijving"):
+        for project, proj_df in klant_df.groupby("project"):
             proj_uren = proj_df["uren"].sum()
             proj_bedrag = proj_df["totaalbedrag"].sum()
 
