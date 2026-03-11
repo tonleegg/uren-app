@@ -9,126 +9,134 @@ CSS = """
 <style>
 /* ── Achtergrond & basiskleur ── */
 .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
-    background-color: #0c1929 !important;
+    background-color: #ffffff !important;
 }
-[data-testid="stHeader"] { background-color: #0c1929 !important; box-shadow: none !important; }
-section[data-testid="stSidebar"] { background-color: #0a1520 !important; }
+[data-testid="stHeader"] { background-color: #ffffff !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; }
+section[data-testid="stSidebar"] { background-color: #f4f6f7 !important; border-right: 1px solid #d5d8dc !important; }
 
 /* ── Titels ── */
-h1 { color: #ffffff !important; font-size: 1.6rem !important; font-weight: 700 !important; }
-h2 { color: #ffffff !important; font-weight: 600 !important; }
-h3 { color: #4fc3f7 !important; font-size: 0.85rem !important;
-     font-weight: 600 !important; letter-spacing: 0.04em !important;
+h1 { color: #1a5276 !important; font-size: 1.6rem !important; font-weight: 700 !important; }
+h2 { color: #1a5276 !important; font-weight: 600 !important; }
+h3 { color: #1a5276 !important; font-size: 0.85rem !important;
+     font-weight: 700 !important; letter-spacing: 0.04em !important;
      text-transform: uppercase !important; margin-bottom: 2px !important; }
-p, label, .stMarkdown p { color: #c8d8e8 !important; }
+p, label, .stMarkdown p { color: #2c3e50 !important; }
 
 /* ── Formuliercontainer ── */
 [data-testid="stForm"] {
-    background-color: #132035 !important;
-    border: 1px solid #1e3a5f !important;
-    border-radius: 12px !important;
+    background-color: #f8f9fa !important;
+    border: 1px solid #d5d8dc !important;
+    border-top: 3px solid #1a5276 !important;
+    border-radius: 8px !important;
     padding: 1.2rem 1.4rem !important;
 }
 
 /* ── Invoervelden ── */
 .stTextInput input, .stNumberInput input, .stDateInput input {
-    background-color: #1a2f4a !important;
-    color: #e8f0f8 !important;
-    border: 1px solid #2a4a6a !important;
-    border-radius: 8px !important;
+    background-color: #ffffff !important;
+    color: #2c3e50 !important;
+    border: 1px solid #aab7b8 !important;
+    border-radius: 6px !important;
 }
 .stTextInput input:focus, .stNumberInput input:focus, .stDateInput input:focus {
-    border-color: #4fc3f7 !important;
-    box-shadow: 0 0 0 2px rgba(79,195,247,0.15) !important;
+    border-color: #1a5276 !important;
+    box-shadow: 0 0 0 2px rgba(26,82,118,0.12) !important;
 }
 .stTextInput label, .stNumberInput label, .stDateInput label,
-.stSelectbox label { color: #7a9bbf !important; font-size: 0.82rem !important; }
+.stSelectbox label { color: #7f8c8d !important; font-size: 0.82rem !important; font-weight: 600 !important; }
 
 /* ── Selectbox ── */
 .stSelectbox [data-baseweb="select"] > div {
-    background-color: #1a2f4a !important;
-    border-color: #2a4a6a !important;
-    border-radius: 8px !important;
+    background-color: #ffffff !important;
+    border-color: #aab7b8 !important;
+    border-radius: 6px !important;
 }
 .stSelectbox [data-baseweb="select"] span,
-.stSelectbox [data-baseweb="select"] div { color: #e8f0f8 !important; }
-[data-baseweb="popover"] { background-color: #1a2f4a !important; border-color: #2a4a6a !important; }
-[data-baseweb="menu"] { background-color: #1a2f4a !important; }
-[role="option"] { background-color: #1a2f4a !important; color: #e8f0f8 !important; }
-[role="option"]:hover { background-color: #1e3a5f !important; }
+.stSelectbox [data-baseweb="select"] div { color: #2c3e50 !important; }
+[data-baseweb="popover"] { background-color: #ffffff !important; border-color: #aab7b8 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important; }
+[data-baseweb="menu"] { background-color: #ffffff !important; }
+[role="option"] { background-color: #ffffff !important; color: #2c3e50 !important; }
+[role="option"]:hover { background-color: #eaf0fb !important; color: #1a5276 !important; }
 
-/* ── Knoppen ── */
+/* ── Sidebar tekst & knoppen ── */
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] .stMarkdown p { color: #2c3e50 !important; }
+
+/* ── Knoppen (icoon-knoppen in overzicht) ── */
 .stButton > button {
-    background-color: #1a2f4a !important;
-    color: #c8d8e8 !important;
-    border: 1px solid #2a4a6a !important;
+    background-color: #ffffff !important;
+    color: #7f8c8d !important;
+    border: 1px solid #d5d8dc !important;
     border-radius: 6px !important;
     font-size: 0.85rem !important;
     padding: 4px 10px !important;
-    transition: border-color 0.15s, background-color 0.15s !important;
+    transition: border-color 0.15s, background-color 0.15s, color 0.15s !important;
 }
 .stButton > button:hover {
-    background-color: #1e3a5f !important;
-    border-color: #4fc3f7 !important;
-    color: #ffffff !important;
+    background-color: #eaf0fb !important;
+    border-color: #1a5276 !important;
+    color: #1a5276 !important;
 }
 
 /* ── Formulierknoppen ── */
 .stFormSubmitButton > button {
-    background-color: #1565c0 !important;
+    background-color: #1a5276 !important;
     color: #ffffff !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     font-weight: 600 !important;
     width: 100% !important;
     padding: 8px !important;
+    transition: background-color 0.15s !important;
 }
-.stFormSubmitButton > button:hover { background-color: #1976d2 !important; }
+.stFormSubmitButton > button:hover { background-color: #154360 !important; }
 
 /* ── Berichten ── */
-[data-testid="stAlert"] { border-radius: 8px !important; }
+[data-testid="stAlert"] { border-radius: 6px !important; }
 
 /* ── Scheidingslijn ── */
-hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !important; }
+hr { border-color: #d5d8dc !important; opacity: 1 !important; margin: 6px 0 !important; }
 
 /* ── Uren-kaart (overzicht) ── */
 .uren-sectie-label {
-    color: #4fc3f7;
+    color: #1a5276;
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     padding-bottom: 6px;
-    border-bottom: 1px solid #1e3a5f;
+    border-bottom: 2px solid #1a5276;
     margin-bottom: 0;
 }
 .uren-kaart {
-    background-color: #132035;
-    border-radius: 10px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
     padding: 12px 16px;
     margin-bottom: 6px;
-    border-left: 3px solid #1e3a5f;
+    border-left: 3px solid #1a5276;
+    border: 1px solid #d5d8dc;
+    border-left: 3px solid #1a5276;
 }
 .uren-kaart-title {
     font-weight: 700;
     font-size: 1rem;
-    color: #ffffff;
+    color: #1a5276;
     margin-bottom: 2px;
 }
 .uren-kaart-sub {
-    color: #7a9bbf;
+    color: #2c3e50;
     font-size: 0.85rem;
     margin-bottom: 4px;
 }
 .uren-kaart-meta {
-    color: #7a9bbf;
+    color: #7f8c8d;
     font-size: 0.82rem;
 }
 .uren-badge {
     display: inline-block;
-    background-color: #1a2f4a;
-    color: #c8d8e8;
-    border: 1px solid #2a4a6a;
+    background-color: #1a5276;
+    color: #ffffff;
     border-radius: 6px;
     padding: 2px 10px;
     font-size: 0.82rem;
@@ -138,16 +146,16 @@ hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !imp
 }
 .subtotaal-rij {
     text-align: right;
-    color: #7a9bbf;
+    color: #7f8c8d;
     font-size: 0.82rem;
     padding: 4px 0 8px 0;
 }
 .totaal-rij {
     text-align: right;
-    color: #c8d8e8;
+    color: #1a5276;
     font-size: 0.9rem;
-    font-weight: 600;
-    border-top: 1px solid #1e3a5f;
+    font-weight: 700;
+    border-top: 1px solid #d5d8dc;
     padding-top: 6px;
     margin-top: 4px;
 }
@@ -246,7 +254,13 @@ NIEUW_PROJECT = "--- Nieuw project toevoegen ---"
 st.set_page_config(page_title="Urenregistratie", page_icon="⏱️", layout="centered")
 st.markdown(CSS, unsafe_allow_html=True)
 
+LOGO_PAD = "daauw kl.png"
+
 if not st.session_state.get("ingelogd"):
+    try:
+        st.image(LOGO_PAD, width=180)
+    except Exception:
+        pass
     st.title("Urenregistratie")
     with st.form("login_formulier"):
         email_input = st.text_input("E-mailadres")
@@ -265,6 +279,10 @@ if not st.session_state.get("ingelogd"):
     st.stop()
 
 with st.sidebar:
+    try:
+        st.image(LOGO_PAD, width=120)
+    except Exception:
+        pass
     st.markdown(f"Ingelogd als **{st.session_state['gebruiker_naam']}**")
     if st.button("Uitloggen"):
         get_client().auth.sign_out()
@@ -273,6 +291,10 @@ with st.sidebar:
         st.session_state["gebruiker_email"] = None
         st.rerun()
 
+try:
+    st.image(LOGO_PAD, width=160)
+except Exception:
+    pass
 st.title("Urenregistratie")
 
 bewerkregel = st.session_state.get("bewerkregel")
