@@ -150,8 +150,18 @@ hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !imp
     padding-top: 6px;
     margin-top: 4px;
 }
+
+/* ── Focus-trap (vangt Tab op na laatste invoerveld) ── */
+.focus-trap {
+    overflow: hidden;
+    height: 0;
+    width: 0;
+    position: absolute;
+}
 </style>
 """
+
+FOCUS_TRAP = '<div class="focus-trap"><input type="text" tabindex="0" aria-hidden="true"></div>'
 
 
 @st.cache_resource
@@ -268,6 +278,7 @@ if bewerkregel is not None:
         datum_edit = st.date_input("Datum", value=pd.to_datetime(rij["datum"]).date())
         uren_edit = st.number_input("Uren", min_value=0.0, value=float(rij["uren"]), step=0.5, format="%.1f")
         tarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["tarief"]), step=1.0, format="%.2f")
+        st.markdown(FOCUS_TRAP, unsafe_allow_html=True)
         btn_col1, btn_col2 = st.columns(2)
         opslaan_edit = btn_col1.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
         annuleer = btn_col2.form_submit_button("Annuleren", use_container_width=True)
@@ -314,6 +325,7 @@ else:
         datum = st.date_input("Datum", value=date.today())
         uren = st.number_input("Uren", min_value=0.0, step=0.5, format="%.1f")
         tarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
+        st.markdown(FOCUS_TRAP, unsafe_allow_html=True)
         opslaan = st.form_submit_button("Opslaan", type="primary", use_container_width=True)
 
     if opslaan:
