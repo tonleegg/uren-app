@@ -255,23 +255,16 @@ if bewerkregel is not None:
     klant_opties_edit = [NIEUW_KLANT] + suggesties_edit["klanten"]
     project_opties_edit = [NIEUW_PROJECT] + suggesties_edit["projecten"]
 
-    col1, col2 = st.columns(2)
-    with col1:
-        klant_idx = klant_opties_edit.index(rij["klant"]) if rij["klant"] in klant_opties_edit else 0
-        klant_keuze_edit = st.selectbox("Klant", klant_opties_edit, index=klant_idx, key=f"klant_sb_edit_{bewerkregel}")
-        if klant_keuze_edit == NIEUW_KLANT:
-            klant_waarde_edit = st.text_input("Nieuwe klantnaam", key=f"klant_input_edit_{bewerkregel}")
-        else:
-            klant_waarde_edit = klant_keuze_edit
-    with col2:
-        project_idx = project_opties_edit.index(rij["project"]) if rij["project"] in project_opties_edit else 0
-        project_keuze_edit = st.selectbox("Projectomschrijving", project_opties_edit, index=project_idx, key=f"project_sb_edit_{bewerkregel}")
-        if project_keuze_edit == NIEUW_PROJECT:
-            project_waarde_edit = st.text_input("Nieuw project", key=f"project_input_edit_{bewerkregel}")
-        else:
-            project_waarde_edit = project_keuze_edit
-
     with st.form("bewerk_formulier", clear_on_submit=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            klant_idx = klant_opties_edit.index(rij["klant"]) if rij["klant"] in klant_opties_edit else 0
+            klant_keuze_edit = st.selectbox("Klant", klant_opties_edit, index=klant_idx, key=f"klant_sb_edit_{bewerkregel}")
+            klant_nieuw_edit = st.text_input("Nieuwe klantnaam", key=f"klant_input_edit_{bewerkregel}", placeholder="Alleen invullen bij 'Nieuwe klant toevoegen'")
+        with col2:
+            project_idx = project_opties_edit.index(rij["project"]) if rij["project"] in project_opties_edit else 0
+            project_keuze_edit = st.selectbox("Project", project_opties_edit, index=project_idx, key=f"project_sb_edit_{bewerkregel}")
+            project_nieuw_edit = st.text_input("Nieuw project", key=f"project_input_edit_{bewerkregel}", placeholder="Alleen invullen bij 'Nieuw project toevoegen'")
         datum_edit = st.date_input("Datum", value=pd.to_datetime(rij["datum"]).date())
         uren_edit = st.number_input("Uren", min_value=0.0, value=float(rij["uren"]), step=0.5, format="%.1f")
         tarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["tarief"]), step=1.0, format="%.2f")
@@ -284,8 +277,8 @@ if bewerkregel is not None:
         st.rerun()
 
     if opslaan_edit:
-        klant_edit = (klant_waarde_edit or "").strip()
-        omschrijving_edit = (project_waarde_edit or "").strip()
+        klant_edit = (klant_nieuw_edit if klant_keuze_edit == NIEUW_KLANT else klant_keuze_edit).strip()
+        omschrijving_edit = (project_nieuw_edit if project_keuze_edit == NIEUW_PROJECT else project_keuze_edit).strip()
         if not klant_edit:
             st.error("Vul een klantnaam in.")
         elif not omschrijving_edit:
@@ -310,29 +303,22 @@ else:
     klant_opties = [NIEUW_KLANT] + suggesties["klanten"]
     project_opties = [NIEUW_PROJECT] + suggesties["projecten"]
 
-    col1, col2 = st.columns(2)
-    with col1:
-        klant_keuze = st.selectbox("Klant", klant_opties, key=f"klant_sb_nieuw_{save_cnt}")
-        if klant_keuze == NIEUW_KLANT:
-            klant_waarde = st.text_input("Nieuwe klantnaam", key=f"klant_input_nieuw_{save_cnt}")
-        else:
-            klant_waarde = klant_keuze
-    with col2:
-        project_keuze = st.selectbox("Projectomschrijving", project_opties, key=f"project_sb_nieuw_{save_cnt}")
-        if project_keuze == NIEUW_PROJECT:
-            project_waarde = st.text_input("Nieuw project", key=f"project_input_nieuw_{save_cnt}")
-        else:
-            project_waarde = project_keuze
-
     with st.form("uren_formulier", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            klant_keuze = st.selectbox("Klant", klant_opties, key=f"klant_sb_nieuw_{save_cnt}")
+            klant_nieuw = st.text_input("Nieuwe klantnaam", key=f"klant_input_nieuw_{save_cnt}", placeholder="Alleen invullen bij 'Nieuwe klant toevoegen'")
+        with col2:
+            project_keuze = st.selectbox("Project", project_opties, key=f"project_sb_nieuw_{save_cnt}")
+            project_nieuw = st.text_input("Nieuw project", key=f"project_input_nieuw_{save_cnt}", placeholder="Alleen invullen bij 'Nieuw project toevoegen'")
         datum = st.date_input("Datum", value=date.today())
         uren = st.number_input("Uren", min_value=0.0, step=0.5, format="%.1f")
         tarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
         opslaan = st.form_submit_button("Opslaan", type="primary", use_container_width=True)
 
     if opslaan:
-        klant = (klant_waarde or "").strip()
-        omschrijving = (project_waarde or "").strip()
+        klant = (klant_nieuw if klant_keuze == NIEUW_KLANT else klant_keuze).strip()
+        omschrijving = (project_nieuw if project_keuze == NIEUW_PROJECT else project_keuze).strip()
         if not klant:
             st.error("Vul een klantnaam in of kies er een uit de lijst.")
         elif not omschrijving:
