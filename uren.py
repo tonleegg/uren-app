@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, datetime
 from supabase import create_client
-KOLOMMEN = ["klant", "project", "datum", "uren", "uurtarief"]
+KOLOMMEN = ["klant", "project", "datum", "uren", "tarief"]
 
 CSS = """
 <style>
@@ -274,7 +274,7 @@ if bewerkregel is not None:
     with st.form("bewerk_formulier", clear_on_submit=False):
         datum_edit = st.date_input("Datum", value=pd.to_datetime(rij["datum"]).date())
         uren_edit = st.number_input("Uren", min_value=0.0, value=float(rij["uren"]), step=0.5, format="%.1f")
-        uurtarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["uurtarief"]), step=1.0, format="%.2f")
+        tarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["tarief"]), step=1.0, format="%.2f")
         btn_col1, btn_col2 = st.columns(2)
         opslaan_edit = btn_col1.form_submit_button("Opslaan wijzigingen", use_container_width=True)
         annuleer = btn_col2.form_submit_button("Annuleren", use_container_width=True)
@@ -298,7 +298,7 @@ if bewerkregel is not None:
                 "project": omschrijving_edit,
                 "datum": datum_edit.strftime("%Y-%m-%d"),
                 "uren": uren_edit,
-                "uurtarief": uurtarief_edit,
+                "tarief": tarief_edit,
             })
             st.session_state.bewerkregel = None
             st.success("Wijzigingen opgeslagen.")
@@ -327,7 +327,7 @@ else:
     with st.form("uren_formulier", clear_on_submit=True):
         datum = st.date_input("Datum", value=date.today())
         uren = st.number_input("Uren", min_value=0.0, step=0.5, format="%.1f")
-        uurtarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
+        tarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
         opslaan = st.form_submit_button("Opslaan")
 
     if opslaan:
@@ -345,7 +345,7 @@ else:
                 "project": omschrijving,
                 "datum": datum.strftime("%Y-%m-%d"),
                 "uren": uren,
-                "uurtarief": uurtarief,
+                "tarief": tarief,
             })
             st.session_state["save_cnt"] = save_cnt + 1
             st.success(f"Opgeslagen: {uren}u voor {klant}")
@@ -360,8 +360,8 @@ if df.empty:
     st.info("Nog geen uren geregistreerd.")
 else:
     df["uren"] = pd.to_numeric(df["uren"])
-    df["uurtarief"] = pd.to_numeric(df["uurtarief"])
-    df["totaalbedrag"] = df["uren"] * df["uurtarief"]
+    df["tarief"] = pd.to_numeric(df["tarief"])
+    df["totaalbedrag"] = df["uren"] * df["tarief"]
 
     for klant, klant_df in df.groupby("klant"):
         klant_uren_totaal = klant_df["uren"].sum()
@@ -387,7 +387,7 @@ else:
                                 <span class='uren-badge'>€ {bedrag:.2f}</span>
                             </div>
                             <div class='uren-kaart-sub'>{project}</div>
-                            <div class='uren-kaart-meta'>{row['uren']:.1f} uur &nbsp;·&nbsp; € {row['uurtarief']:.2f}/uur</div>
+                            <div class='uren-kaart-meta'>{row['uren']:.1f} uur &nbsp;·&nbsp; € {row['tarief']:.2f}/uur</div>
                         </div>""",
                         unsafe_allow_html=True,
                     )
