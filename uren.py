@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import date, datetime
 from supabase import create_client
-from streamlit_searchbox import st_searchbox
-
 KOLOMMEN = ["klant", "projectomschrijving", "datum", "uren", "uurtarief"]
 
 CSS = """
@@ -203,18 +201,8 @@ def login(email: str, wachtwoord: str):
         return None
 
 
-def zoek_klanten(term: str) -> list:
-    klanten = laad_suggesties()["klanten"]
-    if not term:
-        return klanten
-    return [k for k in klanten if term.lower() in k.lower()]
-
-
-def zoek_projecten(term: str) -> list:
-    projecten = laad_suggesties()["projecten"]
-    if not term:
-        return projecten
-    return [p for p in projecten if term.lower() in p.lower()]
+NIEUW_KLANT = "--- Nieuwe klant toevoegen ---"
+NIEUW_PROJECT = "--- Nieuw project toevoegen ---"
 
 
 # ── Pagina-config ──────────────────────────────────────────────────────────────
@@ -263,25 +251,25 @@ if bewerkregel is not None:
     rij = rij_match.iloc[0]
 
     st.markdown("### Regel bewerken")
+    suggesties_edit = laad_suggesties()
+    klant_opties_edit = [NIEUW_KLANT] + suggesties_edit["klanten"]
+    project_opties_edit = [NIEUW_PROJECT] + suggesties_edit["projecten"]
+
     col1, col2 = st.columns(2)
     with col1:
-        klant_waarde_edit = st_searchbox(
-            zoek_klanten,
-            key=f"klant_sb_edit_{bewerkregel}",
-            placeholder="Zoek of typ een klant...",
-            label="Klant",
-            default=rij["klant"],
-            default_use_searchterm=True,
-        )
+        klant_idx = klant_opties_edit.index(rij["klant"]) if rij["klant"] in klant_opties_edit else 0
+        klant_keuze_edit = st.selectbox("Klant", klant_opties_edit, index=klant_idx, key=f"klant_sb_edit_{bewerkregel}")
+        if klant_keuze_edit == NIEUW_KLANT:
+            klant_waarde_edit = st.text_input("Nieuwe klantnaam", key=f"klant_input_edit_{bewerkregel}")
+        else:
+            klant_waarde_edit = klant_keuze_edit
     with col2:
-        project_waarde_edit = st_searchbox(
-            zoek_projecten,
-            key=f"project_sb_edit_{bewerkregel}",
-            placeholder="Zoek of typ een omschrijving...",
-            label="Projectomschrijving",
-            default=rij["projectomschrijving"],
-            default_use_searchterm=True,
-        )
+        project_idx = project_opties_edit.index(rij["projectomschrijving"]) if rij["projectomschrijving"] in project_opties_edit else 0
+        project_keuze_edit = st.selectbox("Projectomschrijving", project_opties_edit, index=project_idx, key=f"project_sb_edit_{bewerkregel}")
+        if project_keuze_edit == NIEUW_PROJECT:
+            project_waarde_edit = st.text_input("Nieuwe projectomschrijving", key=f"project_input_edit_{bewerkregel}")
+        else:
+            project_waarde_edit = project_keuze_edit
 
     with st.form("bewerk_formulier", clear_on_submit=False):
         datum_edit = st.date_input("Datum", value=pd.to_datetime(rij["datum"]).date())
@@ -318,23 +306,23 @@ if bewerkregel is not None:
 
 else:
     st.markdown("### Nieuwe regel invoeren")
+    suggesties = laad_suggesties()
+    klant_opties = [NIEUW_KLANT] + suggesties["klanten"]
+    project_opties = [NIEUW_PROJECT] + suggesties["projecten"]
+
     col1, col2 = st.columns(2)
     with col1:
-        klant_waarde = st_searchbox(
-            zoek_klanten,
-            key=f"klant_sb_nieuw_{save_cnt}",
-            placeholder="Zoek of typ een klant...",
-            label="Klant",
-            default_use_searchterm=True,
-        )
+        klant_keuze = st.selectbox("Klant", klant_opties, key=f"klant_sb_nieuw_{save_cnt}")
+        if klant_keuze == NIEUW_KLANT:
+            klant_waarde = st.text_input("Nieuwe klantnaam", key=f"klant_input_nieuw_{save_cnt}")
+        else:
+            klant_waarde = klant_keuze
     with col2:
-        project_waarde = st_searchbox(
-            zoek_projecten,
-            key=f"project_sb_nieuw_{save_cnt}",
-            placeholder="Zoek of typ een omschrijving...",
-            label="Projectomschrijving",
-            default_use_searchterm=True,
-        )
+        project_keuze = st.selectbox("Projectomschrijving", project_opties, key=f"project_sb_nieuw_{save_cnt}")
+        if project_keuze == NIEUW_PROJECT:
+            project_waarde = st.text_input("Nieuwe projectomschrijving", key=f"project_input_nieuw_{save_cnt}")
+        else:
+            project_waarde = project_keuze
 
     with st.form("uren_formulier", clear_on_submit=True):
         datum = st.date_input("Datum", value=date.today())
