@@ -158,7 +158,7 @@ hr { border-color: #1e3a5f !important; opacity: 1 !important; margin: 6px 0 !imp
 
 @st.cache_resource
 def get_client():
-    return create_client(st.secrets["supabase"]["url"], st.secrets["supabase"]["key"])
+    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 
 @st.cache_data(ttl=60)
