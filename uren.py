@@ -276,7 +276,7 @@ if bewerkregel is not None:
         uren_edit = st.number_input("Uren", min_value=0.0, value=float(rij["uren"]), step=0.5, format="%.1f")
         tarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["tarief"]), step=1.0, format="%.2f")
         btn_col1, btn_col2 = st.columns(2)
-        opslaan_edit = btn_col1.form_submit_button("Opslaan wijzigingen", use_container_width=True)
+        opslaan_edit = btn_col1.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
         annuleer = btn_col2.form_submit_button("Annuleren", use_container_width=True)
 
     if annuleer:
@@ -328,7 +328,7 @@ else:
         datum = st.date_input("Datum", value=date.today())
         uren = st.number_input("Uren", min_value=0.0, step=0.5, format="%.1f")
         tarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
-        opslaan = st.form_submit_button("Opslaan")
+        opslaan = st.form_submit_button("Opslaan", type="primary", use_container_width=True)
 
     if opslaan:
         klant = (klant_waarde or "").strip()
