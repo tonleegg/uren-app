@@ -5,28 +5,33 @@ import pycountry
 from datetime import date, datetime
 from supabase import create_client
 
-KOLOMMEN = ["klant", "project", "datum", "uren", "tarief", "land"]
 LANDEN = sorted([c.name for c in pycountry.countries])
 STANDAARD_LAND = "Netherlands"
+LOGO_PAD = "daauw kl.png"
+OPDRACHT_STATUSSEN = ["Actief", "Aangevraagd", "Gepauzeerd", "Afgerond"]
+EENHEDEN = ["uur", "dag", "week", "stuk", "project"]
+EENHEID_MEERVOUD = {"uur": "uren", "dag": "dagen", "week": "weken", "stuk": "stuks", "project": "projecten"}
 
+# ── CSS ────────────────────────────────────────────────────────────────────────
 CSS = """
 <style>
-/* ── Achtergrond & basiskleur ── */
 .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
     background-color: #ffffff !important;
 }
-[data-testid="stHeader"] { background-color: #ffffff !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important; }
-section[data-testid="stSidebar"] { background-color: #f4f6f7 !important; border-right: 1px solid #d5d8dc !important; }
-
-/* ── Titels ── */
+[data-testid="stHeader"] {
+    background-color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+}
+section[data-testid="stSidebar"] {
+    background-color: #f4f6f7 !important;
+    border-right: 1px solid #d5d8dc !important;
+}
 h1 { color: #1a5276 !important; font-size: 1.6rem !important; font-weight: 700 !important; }
 h2 { color: #1a5276 !important; font-weight: 600 !important; }
-h3 { color: #1a5276 !important; font-size: 0.85rem !important;
-     font-weight: 700 !important; letter-spacing: 0.04em !important;
-     text-transform: uppercase !important; margin-bottom: 2px !important; }
+h3 { color: #1a5276 !important; font-size: 0.85rem !important; font-weight: 700 !important;
+     letter-spacing: 0.04em !important; text-transform: uppercase !important; margin-bottom: 2px !important; }
 p, label, .stMarkdown p { color: #2c3e50 !important; }
 
-/* ── Formuliercontainer ── */
 [data-testid="stForm"] {
     background-color: #f8f9fa !important;
     border: 1px solid #d5d8dc !important;
@@ -34,223 +39,134 @@ p, label, .stMarkdown p { color: #2c3e50 !important; }
     border-radius: 8px !important;
     padding: 1.2rem 1.4rem !important;
 }
-
-/* ── Invoervelden ── */
 .stTextInput input, .stNumberInput input, .stDateInput input {
-    background-color: #ffffff !important;
-    color: #2c3e50 !important;
-    border: 1px solid #aab7b8 !important;
-    border-radius: 6px !important;
+    background-color: #ffffff !important; color: #2c3e50 !important;
+    border: 1px solid #aab7b8 !important; border-radius: 6px !important;
 }
 .stTextInput input:focus, .stNumberInput input:focus, .stDateInput input:focus {
-    border-color: #1a5276 !important;
-    box-shadow: 0 0 0 2px rgba(26,82,118,0.12) !important;
+    border-color: #1a5276 !important; box-shadow: 0 0 0 2px rgba(26,82,118,0.12) !important;
 }
-.stTextInput label, .stNumberInput label, .stDateInput label,
-.stSelectbox label { color: #7f8c8d !important; font-size: 0.82rem !important; font-weight: 600 !important; }
-
-/* ── Selectbox ── */
+.stTextInput label, .stNumberInput label, .stDateInput label, .stSelectbox label {
+    color: #7f8c8d !important; font-size: 0.82rem !important; font-weight: 600 !important;
+}
 .stSelectbox [data-baseweb="select"] > div {
-    background-color: #ffffff !important;
-    border-color: #aab7b8 !important;
-    border-radius: 6px !important;
+    background-color: #ffffff !important; border-color: #aab7b8 !important; border-radius: 6px !important;
 }
 .stSelectbox [data-baseweb="select"] span,
 .stSelectbox [data-baseweb="select"] div { color: #2c3e50 !important; }
-[data-baseweb="popover"] { background-color: #ffffff !important; border-color: #aab7b8 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important; }
+[data-baseweb="popover"] {
+    background-color: #ffffff !important; border-color: #aab7b8 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10) !important;
+}
 [data-baseweb="menu"] { background-color: #ffffff !important; }
 [role="option"] { background-color: #ffffff !important; color: #2c3e50 !important; }
 [role="option"]:hover { background-color: #eaf0fb !important; color: #1a5276 !important; }
 
-/* ── Sidebar tekst & knoppen ── */
 section[data-testid="stSidebar"] p,
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] .stMarkdown p { color: #2c3e50 !important; }
 
-/* ── Knoppen (icoon-knoppen in overzicht) ── */
 .stButton > button {
-    background-color: #ffffff !important;
-    color: #7f8c8d !important;
-    border: 1px solid #d5d8dc !important;
-    border-radius: 6px !important;
-    font-size: 0.85rem !important;
-    padding: 4px 10px !important;
+    background-color: #ffffff !important; color: #7f8c8d !important;
+    border: 1px solid #d5d8dc !important; border-radius: 6px !important;
+    font-size: 0.85rem !important; padding: 4px 10px !important;
     transition: border-color 0.15s, background-color 0.15s, color 0.15s !important;
 }
 .stButton > button:hover {
-    background-color: #eaf0fb !important;
-    border-color: #1a5276 !important;
-    color: #1a5276 !important;
+    background-color: #eaf0fb !important; border-color: #1a5276 !important; color: #1a5276 !important;
 }
-
-/* ── Formulierknoppen ── */
 .stFormSubmitButton > button {
-    background-color: #1a5276 !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: 6px !important;
-    font-weight: 600 !important;
-    width: 100% !important;
-    padding: 8px !important;
-    transition: background-color 0.15s !important;
+    background-color: #1a5276 !important; color: #ffffff !important; border: none !important;
+    border-radius: 6px !important; font-weight: 600 !important; width: 100% !important;
+    padding: 8px !important; transition: background-color 0.15s !important;
 }
 .stFormSubmitButton > button:hover { background-color: #154360 !important; }
-
-/* ── Berichten ── */
 [data-testid="stAlert"] { border-radius: 6px !important; }
-
-/* ── Scheidingslijn ── */
 hr { border-color: #d5d8dc !important; opacity: 1 !important; margin: 6px 0 !important; }
 
-/* ── Uren-kaart (overzicht) ── */
 .uren-sectie-label {
-    color: #1a5276;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding-bottom: 6px;
-    border-bottom: 2px solid #1a5276;
-    margin-bottom: 0;
+    color: #1a5276; font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding-bottom: 6px; border-bottom: 2px solid #1a5276; margin-bottom: 0;
 }
 .uren-kaart {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 6px;
-    border-left: 3px solid #1a5276;
-    border: 1px solid #d5d8dc;
-    border-left: 3px solid #1a5276;
+    background-color: #f8f9fa; border-radius: 8px; padding: 12px 16px;
+    margin-bottom: 6px; border: 1px solid #d5d8dc; border-left: 3px solid #1a5276;
 }
-.uren-kaart-title {
-    font-weight: 700;
-    font-size: 1rem;
-    color: #1a5276;
-    margin-bottom: 2px;
-}
-.uren-kaart-sub {
-    color: #2c3e50;
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-}
-.uren-kaart-meta {
-    color: #7f8c8d;
-    font-size: 0.82rem;
-}
+.uren-kaart-title { font-weight: 700; font-size: 1rem; color: #1a5276; margin-bottom: 2px; }
+.uren-kaart-sub { color: #2c3e50; font-size: 0.85rem; margin-bottom: 4px; }
+.uren-kaart-meta { color: #7f8c8d; font-size: 0.82rem; }
 .uren-badge {
-    display: inline-block;
-    background-color: #1a5276;
-    color: #ffffff;
-    border-radius: 6px;
-    padding: 2px 10px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    float: right;
-    margin-top: -2px;
+    display: inline-block; background-color: #1a5276; color: #ffffff;
+    border-radius: 6px; padding: 2px 10px; font-size: 0.82rem;
+    font-weight: 600; float: right; margin-top: -2px;
 }
-.subtotaal-rij {
-    text-align: right;
-    color: #7f8c8d;
-    font-size: 0.82rem;
-    padding: 4px 0 8px 0;
+.badge-groen {
+    display: inline-block; background-color: #1e8449; color: #ffffff;
+    border-radius: 6px; padding: 2px 10px; font-size: 0.82rem; font-weight: 600;
+    float: right; margin-top: -2px;
+}
+.badge-grijs {
+    display: inline-block; background-color: #7f8c8d; color: #ffffff;
+    border-radius: 6px; padding: 2px 10px; font-size: 0.82rem; font-weight: 600;
+    float: right; margin-top: -2px;
 }
 .totaal-rij {
-    text-align: right;
-    color: #1a5276;
-    font-size: 0.9rem;
-    font-weight: 700;
-    border-top: 1px solid #d5d8dc;
-    padding-top: 6px;
-    margin-top: 4px;
+    text-align: right; color: #1a5276; font-size: 0.9rem; font-weight: 700;
+    border-top: 1px solid #d5d8dc; padding-top: 6px; margin-top: 4px;
 }
-
-/* ── Logo-container ── */
 [data-testid="stImage"] {
-    overflow: visible !important;
-    max-width: none !important;
-    padding-right: 1rem !important;
+    overflow: visible !important; max-width: none !important; padding-right: 1rem !important;
 }
-[data-testid="stImage"] img {
-    max-width: none !important;
-    overflow: visible !important;
-}
-
-/* ── Focus-trap (vangt Tab op na laatste invoerveld) ── */
-.focus-trap {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-}
+[data-testid="stImage"] img { max-width: none !important; overflow: visible !important; }
 </style>
 """
 
-FOCUS_TRAP = '<div class="focus-trap"><input type="text" tabindex="0" aria-hidden="true"></div>'
 
-TAB_NAAR_OPSLAAN_JS = """
-<script>
-(function () {
-    function setup() {
-        var doc = window.parent.document;
-        var numInputs = doc.querySelectorAll('[data-testid="stNumberInput"] input');
-        if (!numInputs.length) { setTimeout(setup, 200); return; }
-        var tariefInput = numInputs[numInputs.length - 1];
-        tariefInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Tab' && !e.shiftKey) {
-                var submitBtn = doc.querySelector('[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"]');
-                if (!submitBtn) submitBtn = doc.querySelector('[data-testid="stFormSubmitButton"] button');
-                if (submitBtn) { e.preventDefault(); submitBtn.focus(); }
-            }
-        });
-    }
-    setup();
-})();
-</script>
-"""
-
-
+# ── Supabase ───────────────────────────────────────────────────────────────────
 @st.cache_resource
 def get_client():
     return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 
 @st.cache_data(ttl=60)
-def laad_data() -> pd.DataFrame:
-    res = get_client().table("uren").select("*").order("datum").execute()
+def laad_klanten() -> pd.DataFrame:
+    res = get_client().table("klanten").select("*").order("naam").execute()
     if res.data:
         return pd.DataFrame(res.data)
-    return pd.DataFrame(columns=["id"] + KOLOMMEN + ["timestamp"])
+    return pd.DataFrame(columns=["id", "naam", "adres", "postcode", "stad", "land"])
 
 
-def laad_suggesties() -> dict:
-    df = laad_data()
-    if df.empty:
-        return {"klanten": [], "projecten": []}
-    return {
-        "klanten": sorted(df["klant"].dropna().unique().tolist()),
-        "projecten": sorted(df["project"].dropna().unique().tolist()),
-    }
+@st.cache_data(ttl=60)
+def laad_contactpersonen() -> pd.DataFrame:
+    res = get_client().table("contactpersonen").select("*").order("naam").execute()
+    if res.data:
+        return pd.DataFrame(res.data)
+    return pd.DataFrame(columns=["id", "klant_id", "naam", "functie", "email", "telefoon"])
 
 
-def sla_op(rij: dict) -> None:
-    rij["timestamp"] = datetime.now().isoformat()
-    get_client().table("uren").insert(rij).execute()
-    laad_data.clear()
+@st.cache_data(ttl=60)
+def laad_activiteiten() -> pd.DataFrame:
+    res = get_client().table("activiteiten").select("*").order("naam").execute()
+    if res.data:
+        return pd.DataFrame(res.data)
+    return pd.DataFrame(columns=["id", "naam", "omschrijving", "eenheid", "tarief"])
 
 
-def bewerk_rij(rij_id: int, rij: dict) -> None:
-    get_client().table("uren").update(rij).eq("id", rij_id).execute()
-    laad_data.clear()
+@st.cache_data(ttl=60)
+def laad_opdrachten() -> pd.DataFrame:
+    res = get_client().table("opdrachten").select("*").order("projectcode").execute()
+    if res.data:
+        return pd.DataFrame(res.data)
+    return pd.DataFrame(columns=["id", "klant_id", "projectcode", "omschrijving", "startdatum", "einddatum", "status"])
 
 
-def verwijder_rij(rij_id: int) -> None:
-    get_client().table("uren").delete().eq("id", rij_id).execute()
-    laad_data.clear()
+@st.cache_data(ttl=60)
+def laad_uren() -> pd.DataFrame:
+    res = get_client().table("uren").select("*").order("datum", desc=True).execute()
+    if res.data:
+        return pd.DataFrame(res.data)
+    return pd.DataFrame(columns=["id", "klant_id", "opdracht_id", "activiteit_id", "datum", "eenheden", "tarief"])
 
 
 def login(email: str, wachtwoord: str):
@@ -261,230 +177,575 @@ def login(email: str, wachtwoord: str):
         return None
 
 
-NIEUW_KLANT = "--- Nieuwe klant toevoegen ---"
-NIEUW_PROJECT = "--- Nieuw project toevoegen ---"
+# ── CRUD ───────────────────────────────────────────────────────────────────────
+def _ts():
+    return datetime.now().isoformat()
+
+
+def voeg_klant_toe(rij: dict):
+    rij["timestamp"] = _ts()
+    get_client().table("klanten").insert(rij).execute()
+    laad_klanten.clear()
+
+
+def voeg_contactpersoon_toe(rij: dict):
+    rij["timestamp"] = _ts()
+    get_client().table("contactpersonen").insert(rij).execute()
+    laad_contactpersonen.clear()
+
+
+def voeg_activiteit_toe(rij: dict):
+    rij["timestamp"] = _ts()
+    get_client().table("activiteiten").insert(rij).execute()
+    laad_activiteiten.clear()
+
+
+def voeg_opdracht_toe(rij: dict):
+    rij["timestamp"] = _ts()
+    get_client().table("opdrachten").insert(rij).execute()
+    laad_opdrachten.clear()
+
+
+def sla_uren_op(rij: dict):
+    rij["timestamp"] = _ts()
+    get_client().table("uren").insert(rij).execute()
+    laad_uren.clear()
+
+
+def verwijder_uur(rij_id: int):
+    get_client().table("uren").delete().eq("id", rij_id).execute()
+    laad_uren.clear()
+
+
+def verwijder_klant(rij_id: int):
+    get_client().table("klanten").delete().eq("id", rij_id).execute()
+    laad_klanten.clear()
+
+
+def verwijder_contactpersoon(rij_id: int):
+    get_client().table("contactpersonen").delete().eq("id", rij_id).execute()
+    laad_contactpersonen.clear()
+
+
+def verwijder_activiteit(rij_id: int):
+    get_client().table("activiteiten").delete().eq("id", rij_id).execute()
+    laad_activiteiten.clear()
+
+
+def verwijder_opdracht(rij_id: int):
+    get_client().table("opdrachten").delete().eq("id", rij_id).execute()
+    laad_opdrachten.clear()
 
 
 # ── Pagina-config ──────────────────────────────────────────────────────────────
-st.set_page_config(page_title="Urenregistratie", page_icon="⏱️", layout="centered")
+st.set_page_config(page_title="daauw – Urenregistratie", page_icon="⏱️", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
 
-LOGO_PAD = "daauw kl.png"
-
+# ── Login ──────────────────────────────────────────────────────────────────────
 if not st.session_state.get("ingelogd"):
+    _, col, _ = st.columns([1, 2, 1])
+    with col:
+        try:
+            st.image(LOGO_PAD, width=240, use_container_width=False)
+        except Exception:
+            pass
+        st.title("Inloggen")
+        with st.form("login_formulier"):
+            email_input = st.text_input("E-mailadres")
+            wachtwoord_input = st.text_input("Wachtwoord", type="password")
+            inloggen = st.form_submit_button("Inloggen", type="primary", use_container_width=True)
+        if inloggen:
+            user = login(email_input.strip(), wachtwoord_input)
+            if user:
+                st.session_state["ingelogd"] = True
+                st.session_state["gebruiker_email"] = user.email
+                naam = (user.user_metadata or {}).get("full_name") or user.email
+                st.session_state["gebruiker_naam"] = naam
+                st.rerun()
+            else:
+                st.error("E-mailadres of wachtwoord onjuist.")
+    st.stop()
+
+# ── Sidebar ────────────────────────────────────────────────────────────────────
+with st.sidebar:
     try:
-        st.image(LOGO_PAD, width=240, use_container_width=False)
+        st.image(LOGO_PAD, width=180, use_container_width=False)
+    except Exception:
+        pass
+    st.markdown(f"**{st.session_state['gebruiker_naam']}**")
+    st.markdown(
+        f"<small style='color:#7f8c8d'>{st.session_state['gebruiker_email']}</small>",
+        unsafe_allow_html=True,
+    )
+    st.divider()
+    pagina = st.radio(
+        "Navigatie",
+        ["Urenregistratie", "Klanten", "Contactpersonen", "Activiteiten", "Opdrachten"],
+        label_visibility="collapsed",
+    )
+    st.divider()
+    if st.button("Uitloggen", use_container_width=True):
+        get_client().auth.sign_out()
+        for k in ["ingelogd", "gebruiker_naam", "gebruiker_email"]:
+            st.session_state[k] = None
+        st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGINA: Urenregistratie
+# ══════════════════════════════════════════════════════════════════════════════
+if pagina == "Urenregistratie":
+    try:
+        st.image(LOGO_PAD, width=200, use_container_width=False)
     except Exception:
         pass
     st.title("Urenregistratie")
-    with st.form("login_formulier"):
-        email_input = st.text_input("E-mailadres")
-        wachtwoord_input = st.text_input("Wachtwoord", type="password")
-        inloggen = st.form_submit_button("Inloggen", type="primary")
-    if inloggen:
-        user = login(email_input.strip(), wachtwoord_input)
-        if user:
-            st.session_state["ingelogd"] = True
-            st.session_state["gebruiker_email"] = user.email
-            naam = (user.user_metadata or {}).get("full_name") or user.email
-            st.session_state["gebruiker_naam"] = naam
-            st.rerun()
-        else:
-            st.error("E-mailadres of wachtwoord onjuist.")
-    st.stop()
 
-with st.sidebar:
-    try:
-        st.image(LOGO_PAD, width=240, use_container_width=False)
-    except Exception:
-        pass
-    st.markdown(f"Ingelogd als **{st.session_state['gebruiker_naam']}**")
-    if st.button("Uitloggen"):
-        get_client().auth.sign_out()
-        st.session_state["ingelogd"] = False
-        st.session_state["gebruiker_naam"] = None
-        st.session_state["gebruiker_email"] = None
-        st.rerun()
+    df_klanten = laad_klanten()
+    df_activiteiten = laad_activiteiten()
+    df_opdrachten = laad_opdrachten()
 
-try:
-    st.image(LOGO_PAD, width=240, use_container_width=False)
-except Exception:
-    pass
-st.title("Urenregistratie")
+    if df_klanten.empty:
+        st.warning("Voeg eerst een klant toe via 'Klanten'.")
+    elif df_activiteiten.empty:
+        st.warning("Voeg eerst een activiteit toe via 'Activiteiten'.")
+    else:
+        klant_namen = df_klanten["naam"].tolist()
+        act_namen = df_activiteiten["naam"].tolist()
 
-bewerkregel = st.session_state.get("bewerkregel")
-save_cnt = st.session_state.get("save_cnt", 0)
+        st.markdown("### Nieuwe uren invoeren")
 
-# ── Formulier: nieuw of bewerken ───────────────────────────────────────────────
-if bewerkregel is not None:
-    df_all = laad_data()
-    rij_match = df_all[df_all["id"] == bewerkregel]
-    if rij_match.empty:
-        st.session_state.bewerkregel = None
-        st.rerun()
-    rij = rij_match.iloc[0]
-
-    st.markdown("### Regel bewerken")
-    suggesties_edit = laad_suggesties()
-    klant_opties_edit = [NIEUW_KLANT] + suggesties_edit["klanten"]
-    project_opties_edit = [NIEUW_PROJECT] + suggesties_edit["projecten"]
-
-    with st.form("bewerk_formulier", clear_on_submit=False):
+        # Klant en activiteit buiten het formulier voor auto-fill
         col1, col2 = st.columns(2)
         with col1:
-            klant_idx = klant_opties_edit.index(rij["klant"]) if rij["klant"] in klant_opties_edit else 0
-            klant_keuze_edit = st.selectbox("Klant", klant_opties_edit, index=klant_idx, key=f"klant_sb_edit_{bewerkregel}")
-            klant_nieuw_edit = st.text_input("Nieuwe klantnaam", key=f"klant_input_edit_{bewerkregel}", placeholder="Alleen invullen bij 'Nieuwe klant toevoegen'")
+            klant_naam = st.selectbox("Klant *", klant_namen, key="uren_klant_sb")
         with col2:
-            project_idx = project_opties_edit.index(rij["project"]) if rij["project"] in project_opties_edit else 0
-            project_keuze_edit = st.selectbox("Project", project_opties_edit, index=project_idx, key=f"project_sb_edit_{bewerkregel}")
-            project_nieuw_edit = st.text_input("Nieuw project", key=f"project_input_edit_{bewerkregel}", placeholder="Alleen invullen bij 'Nieuw project toevoegen'")
-        datum_edit = st.date_input("Datum", value=pd.to_datetime(rij["datum"]).date())
-        uren_edit = st.number_input("Uren", min_value=0.0, value=float(rij["uren"]), step=0.5, format="%.1f")
-        tarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["tarief"]), step=1.0, format="%.2f")
-        huidig_land = rij["land"] if "land" in rij and rij["land"] in LANDEN else STANDAARD_LAND
-        land_edit = st.selectbox("Land", LANDEN, index=LANDEN.index(huidig_land), key=f"land_edit_{bewerkregel}")
-        st.markdown(FOCUS_TRAP, unsafe_allow_html=True)
-        btn_col1, btn_col2 = st.columns(2)
-        opslaan_edit = btn_col1.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
-        annuleer = btn_col2.form_submit_button("Annuleren", use_container_width=True)
+            act_naam = st.selectbox("Activiteit *", act_namen, key="uren_act_sb")
 
-    if annuleer:
-        st.session_state.bewerkregel = None
-        st.rerun()
+        def _get_tarief(naam):
+            r = df_activiteiten[df_activiteiten["naam"] == naam]
+            return float(r.iloc[0]["tarief"]) if not r.empty else 0.0
 
-    if opslaan_edit:
-        klant_edit = (klant_nieuw_edit if klant_keuze_edit == NIEUW_KLANT else klant_keuze_edit).strip()
-        omschrijving_edit = (project_nieuw_edit if project_keuze_edit == NIEUW_PROJECT else project_keuze_edit).strip()
-        if not klant_edit:
-            st.error("Vul een klantnaam in.")
-        elif not omschrijving_edit:
-            st.error("Vul een project in.")
-        elif uren_edit <= 0:
-            st.error("Uren moet groter zijn dan 0.")
-        else:
-            bewerk_rij(bewerkregel, {
-                "klant": klant_edit,
-                "project": omschrijving_edit,
-                "datum": datum_edit.strftime("%Y-%m-%d"),
-                "uren": uren_edit,
-                "tarief": tarief_edit,
-                "land": land_edit,
-            })
-            st.session_state.bewerkregel = None
-            st.success("Wijzigingen opgeslagen.")
-            st.rerun()
+        def _get_eenheid(naam):
+            r = df_activiteiten[df_activiteiten["naam"] == naam]
+            return r.iloc[0]["eenheid"] if not r.empty else "uur"
 
-    components.html(TAB_NAAR_OPSLAAN_JS, height=0)
+        # Auto-fill tarief wanneer activiteit wijzigt
+        if st.session_state.get("_uren_prev_act") != act_naam:
+            st.session_state["_uren_prev_act"] = act_naam
+            st.session_state["_uren_default_tarief"] = _get_tarief(act_naam)
+            if "_uren_tarief_input" in st.session_state:
+                del st.session_state["_uren_tarief_input"]
 
-else:
-    st.markdown("### Nieuwe regel invoeren")
-    suggesties = laad_suggesties()
-    klant_opties = [NIEUW_KLANT] + suggesties["klanten"]
-    project_opties = [NIEUW_PROJECT] + suggesties["projecten"]
+        default_tarief = st.session_state.get("_uren_default_tarief", _get_tarief(act_naam))
+        eenheid = _get_eenheid(act_naam)
+        mv = EENHEID_MEERVOUD.get(eenheid, eenheid + "en")
 
-    with st.form("uren_formulier", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            klant_keuze = st.selectbox("Klant", klant_opties, key=f"klant_sb_nieuw_{save_cnt}")
-            klant_nieuw = st.text_input("Nieuwe klantnaam", key=f"klant_input_nieuw_{save_cnt}", placeholder="Alleen invullen bij 'Nieuwe klant toevoegen'")
-        with col2:
-            project_keuze = st.selectbox("Project", project_opties, key=f"project_sb_nieuw_{save_cnt}")
-            project_nieuw = st.text_input("Nieuw project", key=f"project_input_nieuw_{save_cnt}", placeholder="Alleen invullen bij 'Nieuw project toevoegen'")
-        datum = st.date_input("Datum", value=date.today())
-        uren = st.number_input("Uren", min_value=0.0, step=0.5, format="%.1f")
-        tarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
-        land = st.selectbox("Land", LANDEN, index=LANDEN.index(STANDAARD_LAND), key=f"land_nieuw_{save_cnt}")
-        st.markdown(FOCUS_TRAP, unsafe_allow_html=True)
-        opslaan = st.form_submit_button("Opslaan", type="primary", use_container_width=True)
+        # Opdrachten voor gekozen klant
+        klant_row = df_klanten[df_klanten["naam"] == klant_naam].iloc[0]
+        klant_id = int(klant_row["id"])
+        actieve_opdrachten = (
+            df_opdrachten[
+                (df_opdrachten["klant_id"].astype(str) == str(klant_id)) &
+                (df_opdrachten["status"] == "Actief")
+            ]
+            if not df_opdrachten.empty
+            else pd.DataFrame()
+        )
+        opdracht_opties = ["— geen opdracht —"]
+        if not actieve_opdrachten.empty:
+            opdracht_opties += (
+                actieve_opdrachten["projectcode"] + " · " + actieve_opdrachten["omschrijving"]
+            ).tolist()
 
-    if opslaan:
-        klant = (klant_nieuw if klant_keuze == NIEUW_KLANT else klant_keuze).strip()
-        omschrijving = (project_nieuw if project_keuze == NIEUW_PROJECT else project_keuze).strip()
-        if not klant:
-            st.error("Vul een klantnaam in of kies er een uit de lijst.")
-        elif not omschrijving:
-            st.error("Vul een project in of kies er een uit de lijst.")
-        elif uren <= 0:
-            st.error("Uren moet groter zijn dan 0.")
-        else:
-            sla_op({
-                "klant": klant,
-                "project": omschrijving,
-                "datum": datum.strftime("%Y-%m-%d"),
-                "uren": uren,
-                "tarief": tarief,
-                "land": land,
-            })
-            st.session_state["save_cnt"] = save_cnt + 1
-            st.success(f"Opgeslagen: {uren}u voor {klant}")
-            st.rerun()
+        with st.form("uren_formulier", clear_on_submit=True):
+            col3, col4 = st.columns(2)
+            with col3:
+                opdracht_keuze = st.selectbox("Opdracht (optioneel)", opdracht_opties)
+                datum = st.date_input("Datum", value=date.today())
+            with col4:
+                eenheden = st.number_input(
+                    f"Aantal {mv}", min_value=0.0, step=0.5, format="%.1f"
+                )
+                tarief = st.number_input(
+                    f"Tarief per {eenheid} (€)",
+                    min_value=0.0,
+                    value=default_tarief,
+                    step=1.0,
+                    format="%.2f",
+                    key="_uren_tarief_input",
+                )
+            opslaan = st.form_submit_button("Opslaan", type="primary", use_container_width=True)
 
-    components.html(TAB_NAAR_OPSLAAN_JS, height=0)
+        if opslaan:
+            if eenheden <= 0:
+                st.error(f"Aantal {mv} moet groter zijn dan 0.")
+            else:
+                opdracht_id = None
+                if opdracht_keuze != "— geen opdracht —":
+                    code = opdracht_keuze.split(" · ")[0]
+                    match = actieve_opdrachten[actieve_opdrachten["projectcode"] == code]
+                    if not match.empty:
+                        opdracht_id = int(match.iloc[0]["id"])
 
-# ── Overzicht ──────────────────────────────────────────────────────────────────
-st.markdown("<hr style='margin: 1.5rem 0 1rem 0;'>", unsafe_allow_html=True)
-st.markdown("### Overzicht")
-df = laad_data()
+                act_id = int(df_activiteiten[df_activiteiten["naam"] == act_naam].iloc[0]["id"])
+                sla_uren_op({
+                    "klant_id": klant_id,
+                    "opdracht_id": opdracht_id,
+                    "activiteit_id": act_id,
+                    "datum": datum.strftime("%Y-%m-%d"),
+                    "eenheden": eenheden,
+                    "tarief": tarief,
+                })
+                st.success(f"Opgeslagen: {eenheden:.1f} {mv} voor {klant_naam}")
+                st.rerun()
 
-if df.empty:
-    st.info("Nog geen uren geregistreerd.")
-else:
-    df["uren"] = pd.to_numeric(df["uren"])
-    df["tarief"] = pd.to_numeric(df["tarief"])
-    df["totaalbedrag"] = df["uren"] * df["tarief"]
+    # Overzicht
+    st.markdown("<hr style='margin:1.5rem 0 1rem 0;'>", unsafe_allow_html=True)
+    st.markdown("### Overzicht")
+    df_uren = laad_uren()
 
-    for klant, klant_df in df.groupby("klant"):
-        klant_uren_totaal = klant_df["uren"].sum()
-        klant_bedrag_totaal = klant_df["totaalbedrag"].sum()
+    if df_uren.empty:
+        st.info("Nog geen uren geregistreerd.")
+    else:
+        df_k = laad_klanten()[["id", "naam"]].rename(columns={"id": "klant_id", "naam": "klant_naam"})
+        df_a = (
+            laad_activiteiten()[["id", "naam", "eenheid"]]
+            .rename(columns={"id": "activiteit_id", "naam": "activiteit_naam"})
+        )
+        df_o = (
+            laad_opdrachten()[["id", "projectcode"]]
+            .rename(columns={"id": "opdracht_id"})
+        )
 
-        st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
+        for col in ["klant_id", "activiteit_id"]:
+            df_uren[col] = pd.to_numeric(df_uren[col], errors="coerce")
+        df_k["klant_id"] = pd.to_numeric(df_k["klant_id"], errors="coerce")
+        df_a["activiteit_id"] = pd.to_numeric(df_a["activiteit_id"], errors="coerce")
 
-        for project, proj_df in klant_df.groupby("project"):
-            proj_uren = proj_df["uren"].sum()
-            proj_bedrag = proj_df["totaalbedrag"].sum()
+        df_view = (
+            df_uren
+            .merge(df_k, on="klant_id", how="left")
+            .merge(df_a, on="activiteit_id", how="left")
+            .merge(df_o, on="opdracht_id", how="left")
+        )
+        df_view["eenheden"] = pd.to_numeric(df_view["eenheden"], errors="coerce")
+        df_view["tarief"] = pd.to_numeric(df_view["tarief"], errors="coerce")
+        df_view["totaal"] = df_view["eenheden"] * df_view["tarief"]
 
-            for _, row in proj_df.iterrows():
+        for klant, kdf in df_view.groupby("klant_naam"):
+            st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
+            for _, row in kdf.iterrows():
                 rij_id = row["id"]
-                datum_str = pd.to_datetime(row["datum"]).strftime("%d %B %Y").lstrip("0")
-                bedrag = row["totaalbedrag"]
+                datum_str = pd.to_datetime(row["datum"]).strftime("%d %b %Y")
+                opr_str = f" &nbsp;·&nbsp; {row['projectcode']}" if pd.notna(row.get("projectcode")) else ""
+                eh = row["eenheid"] if pd.notna(row.get("eenheid")) else "eenheid"
+                mv_row = EENHEID_MEERVOUD.get(eh, eh + "en")
 
-                kaart_col, btn_col = st.columns([11, 2])
+                kaart_col, btn_col = st.columns([12, 1])
                 with kaart_col:
                     st.markdown(
                         f"""<div class='uren-kaart'>
                             <div class='uren-kaart-title'>
-                                {datum_str}
-                                <span class='uren-badge'>€ {bedrag:.2f}</span>
+                                {datum_str}{opr_str}
+                                <span class='uren-badge'>€ {row['totaal']:.2f}</span>
                             </div>
-                            <div class='uren-kaart-sub'>{project}</div>
-                            <div class='uren-kaart-meta'>{row['uren']:.1f} uur &nbsp;·&nbsp; € {row['tarief']:.2f}/uur</div>
+                            <div class='uren-kaart-sub'>{row['activiteit_naam']}</div>
+                            <div class='uren-kaart-meta'>{row['eenheden']:.1f} {mv_row} &nbsp;·&nbsp; € {row['tarief']:.2f}/{eh}</div>
                         </div>""",
                         unsafe_allow_html=True,
                     )
                 with btn_col:
                     st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
-                    if st.button("✏️", key=f"edit_{rij_id}", help="Bewerken", use_container_width=True):
-                        st.session_state.bewerkregel = rij_id
-                        st.rerun()
-                    if st.button("🗑️", key=f"del_{rij_id}", help="Verwijderen", use_container_width=True):
-                        verwijder_rij(rij_id)
-                        if st.session_state.get("bewerkregel") == rij_id:
-                            st.session_state.bewerkregel = None
+                    if st.button("🗑️", key=f"del_uur_{rij_id}", help="Verwijderen"):
+                        verwijder_uur(rij_id)
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
+            tot_eenheden = kdf["eenheden"].sum()
+            tot_bedrag = kdf["totaal"].sum()
             st.markdown(
-                f"<div class='subtotaal-rij'>Subtotaal <em>{project}</em>: "
-                f"<strong>{proj_uren:.1f} uur</strong> &nbsp;|&nbsp; "
-                f"<strong>€ {proj_bedrag:.2f}</strong></div>",
+                f"<div class='totaal-rij'>Totaal {klant}: "
+                f"<strong>{tot_eenheden:.1f} eenheden</strong> &nbsp;|&nbsp; "
+                f"<strong>€ {tot_bedrag:.2f}</strong></div>",
                 unsafe_allow_html=True,
             )
+            st.markdown("<div style='margin-bottom:1.5rem'></div>", unsafe_allow_html=True)
 
-        st.markdown(
-            f"<div class='totaal-rij'>Totaal {klant}: "
-            f"<strong>{klant_uren_totaal:.1f} uur</strong> &nbsp;|&nbsp; "
-            f"<strong>€ {klant_bedrag_totaal:.2f}</strong></div>",
-            unsafe_allow_html=True,
-        )
-        st.markdown("<div style='margin-bottom: 1.5rem'></div>", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGINA: Klanten
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "Klanten":
+    st.title("Klanten")
+
+    with st.expander("➕ Nieuwe klant toevoegen"):
+        with st.form("klant_formulier", clear_on_submit=True):
+            naam = st.text_input("Bedrijfsnaam *")
+            col1, col2 = st.columns(2)
+            with col1:
+                adres = st.text_input("Adres")
+                stad = st.text_input("Stad")
+            with col2:
+                postcode = st.text_input("Postcode")
+                land = st.selectbox("Land", LANDEN, index=LANDEN.index(STANDAARD_LAND))
+            opslaan = st.form_submit_button("Klant toevoegen", type="primary")
+
+        if opslaan:
+            if not naam.strip():
+                st.error("Bedrijfsnaam is verplicht.")
+            else:
+                voeg_klant_toe({
+                    "naam": naam.strip(),
+                    "adres": adres.strip(),
+                    "postcode": postcode.strip(),
+                    "stad": stad.strip(),
+                    "land": land,
+                })
+                st.success(f"Klant '{naam.strip()}' toegevoegd.")
+                st.rerun()
+
+    df = laad_klanten()
+    if df.empty:
+        st.info("Nog geen klanten.")
+    else:
+        for _, row in df.iterrows():
+            col_info, col_del = st.columns([12, 1])
+            with col_info:
+                adres_delen = [
+                    row.get("adres", ""),
+                    " ".join(filter(None, [row.get("postcode", ""), row.get("stad", "")])),
+                    row.get("land", ""),
+                ]
+                adres_str = " &nbsp;·&nbsp; ".join(d for d in adres_delen if d)
+                st.markdown(
+                    f"<div class='uren-kaart'>"
+                    f"<div class='uren-kaart-title'>{row['naam']}</div>"
+                    f"<div class='uren-kaart-meta'>{adres_str}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            with col_del:
+                st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                if st.button("🗑️", key=f"del_klant_{row['id']}", help="Verwijderen"):
+                    verwijder_klant(int(row["id"]))
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGINA: Contactpersonen
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "Contactpersonen":
+    st.title("Contactpersonen")
+
+    df_klanten = laad_klanten()
+    if df_klanten.empty:
+        st.warning("Voeg eerst een klant toe via 'Klanten'.")
+    else:
+        klant_namen = df_klanten["naam"].tolist()
+
+        with st.expander("➕ Nieuwe contactpersoon toevoegen"):
+            with st.form("contact_formulier", clear_on_submit=True):
+                klant_keuze = st.selectbox("Klant *", klant_namen)
+                col1, col2 = st.columns(2)
+                with col1:
+                    naam = st.text_input("Naam *")
+                    email = st.text_input("E-mailadres")
+                with col2:
+                    functie = st.text_input("Functie")
+                    telefoon = st.text_input("Telefoon")
+                opslaan = st.form_submit_button("Contactpersoon toevoegen", type="primary")
+
+            if opslaan:
+                if not naam.strip():
+                    st.error("Naam is verplicht.")
+                else:
+                    klant_id = int(df_klanten[df_klanten["naam"] == klant_keuze].iloc[0]["id"])
+                    voeg_contactpersoon_toe({
+                        "klant_id": klant_id,
+                        "naam": naam.strip(),
+                        "functie": functie.strip(),
+                        "email": email.strip(),
+                        "telefoon": telefoon.strip(),
+                    })
+                    st.success(f"Contactpersoon '{naam.strip()}' toegevoegd.")
+                    st.rerun()
+
+        df_cp = laad_contactpersonen()
+        if df_cp.empty:
+            st.info("Nog geen contactpersonen.")
+        else:
+            df_cp["klant_id"] = pd.to_numeric(df_cp["klant_id"], errors="coerce")
+            df_klanten["id"] = pd.to_numeric(df_klanten["id"], errors="coerce")
+            df_cp = df_cp.merge(
+                df_klanten[["id", "naam"]].rename(columns={"id": "klant_id", "naam": "klant_naam"}),
+                on="klant_id",
+                how="left",
+            )
+
+            for klant, kdf in df_cp.groupby("klant_naam"):
+                st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
+                for _, row in kdf.iterrows():
+                    col_info, col_del = st.columns([12, 1])
+                    with col_info:
+                        details = " &nbsp;·&nbsp; ".join(
+                            filter(None, [row.get("functie", ""), row.get("email", ""), row.get("telefoon", "")])
+                        )
+                        st.markdown(
+                            f"<div class='uren-kaart'>"
+                            f"<div class='uren-kaart-title'>{row['naam']}</div>"
+                            f"<div class='uren-kaart-meta'>{details}</div>"
+                            f"</div>",
+                            unsafe_allow_html=True,
+                        )
+                    with col_del:
+                        st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                        if st.button("🗑️", key=f"del_cp_{row['id']}", help="Verwijderen"):
+                            verwijder_contactpersoon(int(row["id"]))
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-bottom:1rem'></div>", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGINA: Activiteiten
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "Activiteiten":
+    st.title("Activiteiten")
+
+    with st.expander("➕ Nieuwe activiteit toevoegen"):
+        with st.form("activiteit_formulier", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                naam = st.text_input("Naam *")
+                eenheid = st.selectbox("Eenheid", EENHEDEN)
+            with col2:
+                omschrijving = st.text_input("Omschrijving")
+                tarief = st.number_input("Standaard tarief (€)", min_value=0.0, step=1.0, format="%.2f")
+            opslaan = st.form_submit_button("Activiteit toevoegen", type="primary")
+
+        if opslaan:
+            if not naam.strip():
+                st.error("Naam is verplicht.")
+            else:
+                voeg_activiteit_toe({
+                    "naam": naam.strip(),
+                    "omschrijving": omschrijving.strip(),
+                    "eenheid": eenheid,
+                    "tarief": tarief,
+                })
+                st.success(f"Activiteit '{naam.strip()}' toegevoegd.")
+                st.rerun()
+
+    df = laad_activiteiten()
+    if df.empty:
+        st.info("Nog geen activiteiten.")
+    else:
+        for _, row in df.iterrows():
+            col_info, col_del = st.columns([12, 1])
+            with col_info:
+                eh = row.get("eenheid", "eenheid")
+                st.markdown(
+                    f"<div class='uren-kaart'>"
+                    f"<div class='uren-kaart-title'>{row['naam']}"
+                    f"<span class='uren-badge'>€ {float(row['tarief']):.2f}/{eh}</span></div>"
+                    f"<div class='uren-kaart-meta'>{row.get('omschrijving', '')}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            with col_del:
+                st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                if st.button("🗑️", key=f"del_act_{row['id']}", help="Verwijderen"):
+                    verwijder_activiteit(int(row["id"]))
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGINA: Opdrachten
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "Opdrachten":
+    st.title("Opdrachten")
+
+    df_klanten = laad_klanten()
+    if df_klanten.empty:
+        st.warning("Voeg eerst een klant toe via 'Klanten'.")
+    else:
+        klant_namen = df_klanten["naam"].tolist()
+
+        with st.expander("➕ Nieuwe opdracht toevoegen"):
+            with st.form("opdracht_formulier", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    klant_keuze = st.selectbox("Klant *", klant_namen)
+                    projectcode = st.text_input("Projectcode *")
+                    startdatum = st.date_input("Startdatum", value=date.today())
+                with col2:
+                    omschrijving = st.text_input("Omschrijving *")
+                    status = st.selectbox("Status", OPDRACHT_STATUSSEN)
+                    einddatum = st.date_input("Einddatum (optioneel)", value=None)
+                opslaan = st.form_submit_button("Opdracht toevoegen", type="primary")
+
+            if opslaan:
+                if not projectcode.strip() or not omschrijving.strip():
+                    st.error("Projectcode en omschrijving zijn verplicht.")
+                else:
+                    klant_id = int(df_klanten[df_klanten["naam"] == klant_keuze].iloc[0]["id"])
+                    voeg_opdracht_toe({
+                        "klant_id": klant_id,
+                        "projectcode": projectcode.strip(),
+                        "omschrijving": omschrijving.strip(),
+                        "startdatum": startdatum.strftime("%Y-%m-%d"),
+                        "einddatum": einddatum.strftime("%Y-%m-%d") if einddatum else None,
+                        "status": status,
+                    })
+                    st.success(f"Opdracht '{projectcode.strip()}' toegevoegd.")
+                    st.rerun()
+
+        df = laad_opdrachten()
+        if df.empty:
+            st.info("Nog geen opdrachten.")
+        else:
+            df["klant_id"] = pd.to_numeric(df["klant_id"], errors="coerce")
+            df_klanten["id"] = pd.to_numeric(df_klanten["id"], errors="coerce")
+            df = df.merge(
+                df_klanten[["id", "naam"]].rename(columns={"id": "klant_id", "naam": "klant_naam"}),
+                on="klant_id",
+                how="left",
+            )
+
+            STATUS_BADGE = {
+                "Actief": "badge-groen",
+                "Aangevraagd": "uren-badge",
+                "Gepauzeerd": "badge-grijs",
+                "Afgerond": "badge-grijs",
+            }
+
+            for klant, kdf in df.groupby("klant_naam"):
+                st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
+                for _, row in kdf.iterrows():
+                    col_info, col_del = st.columns([12, 1])
+                    with col_info:
+                        datum_str = ""
+                        if pd.notna(row.get("startdatum")) and row["startdatum"]:
+                            datum_str = str(row["startdatum"])
+                        if pd.notna(row.get("einddatum")) and row["einddatum"]:
+                            datum_str += f" → {row['einddatum']}"
+                        badge_cls = STATUS_BADGE.get(row.get("status", ""), "badge-grijs")
+                        st.markdown(
+                            f"<div class='uren-kaart'>"
+                            f"<div class='uren-kaart-title'>"
+                            f"{row['projectcode']} &nbsp;·&nbsp; {row['omschrijving']}"
+                            f"<span class='{badge_cls}'>{row.get('status', '')}</span></div>"
+                            f"<div class='uren-kaart-meta'>{datum_str}</div>"
+                            f"</div>",
+                            unsafe_allow_html=True,
+                        )
+                    with col_del:
+                        st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                        if st.button("🗑️", key=f"del_opr_{row['id']}", help="Verwijderen"):
+                            verwijder_opdracht(int(row["id"]))
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-bottom:1rem'></div>", unsafe_allow_html=True)
