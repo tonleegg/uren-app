@@ -339,10 +339,10 @@ if pagina == "Urenregistratie":
 
         # Opdrachten voor gekozen klant
         klant_row = df_klanten[df_klanten["bedrijfsnaam"] == klant_naam].iloc[0]
-        klant_id = int(klant_row["id"])
+        klant_id = str(klant_row["id"])
         actieve_opdrachten = (
             df_opdrachten[
-                (df_opdrachten["klant_id"].astype(str) == str(klant_id)) &
+                (df_opdrachten["klant_id"].astype(str) == klant_id) &
                 (df_opdrachten["status"] == "Actief")
             ]
             if not df_opdrachten.empty
@@ -382,9 +382,9 @@ if pagina == "Urenregistratie":
                     code = opdracht_keuze.split(" · ")[0]
                     match = actieve_opdrachten[actieve_opdrachten["projectcode"] == code]
                     if not match.empty:
-                        opdracht_id = int(match.iloc[0]["id"])
+                        opdracht_id = str(match.iloc[0]["id"])
 
-                act_id = int(df_activiteiten[df_activiteiten["omschrijving"] == act_naam].iloc[0]["id"])
+                act_id = str(df_activiteiten[df_activiteiten["omschrijving"] == act_naam].iloc[0]["id"])
                 sla_uren_op({
                     "klant_id": klant_id,
                     "opdracht_id": opdracht_id,
@@ -414,10 +414,12 @@ if pagina == "Urenregistratie":
             .rename(columns={"id": "opdracht_id"})
         )
 
-        for col in ["klant_id", "activiteit_id"]:
-            df_uren[col] = pd.to_numeric(df_uren[col], errors="coerce")
-        df_k["klant_id"] = pd.to_numeric(df_k["klant_id"], errors="coerce")
-        df_a["activiteit_id"] = pd.to_numeric(df_a["activiteit_id"], errors="coerce")
+        for col in ["klant_id", "activiteit_id", "opdracht_id"]:
+            if col in df_uren.columns:
+                df_uren[col] = df_uren[col].astype(str)
+        df_k["klant_id"] = df_k["klant_id"].astype(str)
+        df_a["activiteit_id"] = df_a["activiteit_id"].astype(str)
+        df_o["opdracht_id"] = df_o["opdracht_id"].astype(str)
 
         df_view = (
             df_uren
@@ -454,7 +456,7 @@ if pagina == "Urenregistratie":
                 with btn_col:
                     st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                     if st.button("🗑️", key=f"del_uur_{rij_id}", help="Verwijderen"):
-                        verwijder_uur(rij_id)
+                        verwijder_uur(str(rij_id))
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -524,7 +526,7 @@ elif pagina == "Klanten":
             with col_del:
                 st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                 if st.button("🗑️", key=f"del_klant_{row['id']}", help="Verwijderen"):
-                    verwijder_klant(int(row["id"]))
+                    verwijder_klant(row["id"])
                     st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -557,7 +559,7 @@ elif pagina == "Contactpersonen":
                 if not voornaam.strip():
                     st.error("Voornaam is verplicht.")
                 else:
-                    klant_id = int(df_klanten[df_klanten["bedrijfsnaam"] == klant_keuze].iloc[0]["id"])
+                    klant_id = str(df_klanten[df_klanten["bedrijfsnaam"] == klant_keuze].iloc[0]["id"])
                     voeg_contactpersoon_toe({
                         "klant_id": klant_id,
                         "voornaam": voornaam.strip(),
@@ -572,8 +574,8 @@ elif pagina == "Contactpersonen":
         if df_cp.empty:
             st.info("Nog geen contactpersonen.")
         else:
-            df_cp["klant_id"] = pd.to_numeric(df_cp["klant_id"], errors="coerce")
-            df_klanten["id"] = pd.to_numeric(df_klanten["id"], errors="coerce")
+            df_cp["klant_id"] = df_cp["klant_id"].astype(str)
+            df_klanten["id"] = df_klanten["id"].astype(str)
             df_cp = df_cp.merge(
                 df_klanten[["id", "bedrijfsnaam"]].rename(columns={"id": "klant_id", "bedrijfsnaam": "klant_naam"}),
                 on="klant_id",
@@ -599,7 +601,7 @@ elif pagina == "Contactpersonen":
                     with col_del:
                         st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                         if st.button("🗑️", key=f"del_cp_{row['id']}", help="Verwijderen"):
-                            verwijder_contactpersoon(int(row["id"]))
+                            verwijder_contactpersoon(row["id"])
                             st.rerun()
                         st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("<div style='margin-bottom:1rem'></div>", unsafe_allow_html=True)
@@ -651,7 +653,7 @@ elif pagina == "Activiteiten":
             with col_del:
                 st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                 if st.button("🗑️", key=f"del_act_{row['id']}", help="Verwijderen"):
-                    verwijder_activiteit(int(row["id"]))
+                    verwijder_activiteit(row["id"])
                     st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -685,7 +687,7 @@ elif pagina == "Opdrachten":
                 if not projectcode.strip() or not omschrijving.strip():
                     st.error("Projectcode en omschrijving zijn verplicht.")
                 else:
-                    klant_id = int(df_klanten[df_klanten["bedrijfsnaam"] == klant_keuze].iloc[0]["id"])
+                    klant_id = str(df_klanten[df_klanten["bedrijfsnaam"] == klant_keuze].iloc[0]["id"])
                     voeg_opdracht_toe({
                         "klant_id": klant_id,
                         "projectcode": projectcode.strip(),
@@ -701,8 +703,8 @@ elif pagina == "Opdrachten":
         if df.empty:
             st.info("Nog geen opdrachten.")
         else:
-            df["klant_id"] = pd.to_numeric(df["klant_id"], errors="coerce")
-            df_klanten["id"] = pd.to_numeric(df_klanten["id"], errors="coerce")
+            df["klant_id"] = df["klant_id"].astype(str)
+            df_klanten["id"] = df_klanten["id"].astype(str)
             df = df.merge(
                 df_klanten[["id", "bedrijfsnaam"]].rename(columns={"id": "klant_id", "bedrijfsnaam": "klant_naam"}),
                 on="klant_id",
@@ -739,7 +741,7 @@ elif pagina == "Opdrachten":
                     with col_del:
                         st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                         if st.button("🗑️", key=f"del_opr_{row['id']}", help="Verwijderen"):
-                            verwijder_opdracht(int(row["id"]))
+                            verwijder_opdracht(row["id"])
                             st.rerun()
                         st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("<div style='margin-bottom:1rem'></div>", unsafe_allow_html=True)
