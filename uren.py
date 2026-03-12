@@ -9,7 +9,6 @@ LANDEN = sorted([c.name for c in pycountry.countries])
 STANDAARD_LAND = "Netherlands"
 LOGO_PAD = "daauw kl.png"
 OPDRACHT_STATUSSEN = ["Actief", "Aangevraagd", "Gepauzeerd", "Afgerond"]
-EENHEDEN = ["uur", "dag", "week", "stuk", "project"]
 EENHEID_MEERVOUD = {"uur": "uren", "dag": "dagen", "week": "weken", "stuk": "stuks", "project": "projecten"}
 
 # ── CSS ────────────────────────────────────────────────────────────────────────
@@ -162,6 +161,14 @@ def laad_opdrachten() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=60)
+def laad_eenheden() -> pd.DataFrame:
+    res = get_client().table("eenheden").select("*").order("naam").execute()
+    if res.data:
+        return pd.DataFrame(res.data)
+    return pd.DataFrame(columns=["id", "naam"])
+
+
+@st.cache_data(ttl=60)
 def laad_uren() -> pd.DataFrame:
     res = get_client().table("uren").select("*").order("datum", desc=True).execute()
     if res.data:
@@ -233,6 +240,16 @@ def verwijder_opdracht(rij_id: int):
     laad_opdrachten.clear()
 
 
+def voeg_eenheid_toe(naam: str):
+    get_client().table("eenheden").insert({"naam": naam}).execute()
+    laad_eenheden.clear()
+
+
+def verwijder_eenheid(rij_id):
+    get_client().table("eenheden").delete().eq("id", rij_id).execute()
+    laad_eenheden.clear()
+
+
 # ── Pagina-config ──────────────────────────────────────────────────────────────
 st.set_page_config(page_title="daauw – Urenregistratie", page_icon="⏱️", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
@@ -268,7 +285,7 @@ with st.sidebar:
     st.divider()
     pagina = st.radio(
         "Navigatie",
-        ["Urenregistratie", "Klanten", "Contactpersonen", "Activiteiten", "Opdrachten"],
+        ["Urenregistratie", "Klanten", "Contactpersonen", "Activiteiten", "Opdrachten", "Eenheden"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -605,27 +622,33 @@ elif pagina == "Contactpersonen":
 elif pagina == "Activiteiten":
     st.title("Activiteiten")
 
-    with st.expander("➕ Nieuwe activiteit toevoegen"):
-        with st.form("activiteit_formulier", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                omschrijving = st.text_input("Omschrijving *")
-                eenheid = st.selectbox("Eenheid", EENHEDEN)
-            with col2:
-                standaard_tarief = st.number_input("Standaard tarief (€)", min_value=0.0, step=1.0, format="%.2f")
-            opslaan = st.form_submit_button("Activiteit toevoegen", type="primary")
+    df_eenheden = laad_eenheden()
+    eenheid_opties = df_eenheden["naam"].tolist() if not df_eenheden.empty else []
 
-        if opslaan:
-            if not omschrijving.strip():
-                st.error("Omschrijving is verplicht.")
-            else:
-                voeg_activiteit_toe({
-                    "omschrijving": omschrijving.strip(),
-                    "eenheid": eenheid,
-                    "standaard_tarief": standaard_tarief,
-                })
-                st.success(f"Activiteit '{omschrijving.strip()}' toegevoegd.")
-                st.rerun()
+    with st.expander("➕ Nieuwe activiteit toevoegen"):
+        if not eenheid_opties:
+            st.warning("Voeg eerst een eenheid toe via 'Eenheden'.")
+        else:
+            with st.form("activiteit_formulier", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    omschrijving = st.text_input("Omschrijving *")
+                    eenheid = st.selectbox("Eenheid", eenheid_opties)
+                with col2:
+                    standaard_tarief = st.number_input("Standaard tarief (€)", min_value=0.0, step=1.0, format="%.2f")
+                opslaan = st.form_submit_button("Activiteit toevoegen", type="primary")
+
+            if opslaan:
+                if not omschrijving.strip():
+                    st.error("Omschrijving is verplicht.")
+                else:
+                    voeg_activiteit_toe({
+                        "omschrijving": omschrijving.strip(),
+                        "eenheid": eenheid,
+                        "standaard_tarief": standaard_tarief,
+                    })
+                    st.success(f"Activiteit '{omschrijving.strip()}' toegevoegd.")
+                    st.rerun()
 
     df = laad_activiteiten()
     if df.empty:
@@ -737,3 +760,43 @@ elif pagina == "Opdrachten":
                             st.rerun()
                         st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("<div style='margin-bottom:1rem'></div>", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGINA: Eenheden
+# ══════════════════════════════════════════════════════════════════════════════
+elif pagina == "Eenheden":
+    st.title("Eenheden")
+
+    with st.expander("➕ Nieuwe eenheid toevoegen"):
+        with st.form("eenheid_formulier", clear_on_submit=True):
+            naam = st.text_input("Naam *", placeholder="bijv. uur, dag, stuk")
+            opslaan = st.form_submit_button("Eenheid toevoegen", type="primary")
+
+        if opslaan:
+            if not naam.strip():
+                st.error("Naam is verplicht.")
+            else:
+                voeg_eenheid_toe(naam.strip())
+                st.success(f"Eenheid '{naam.strip()}' toegevoegd.")
+                st.rerun()
+
+    df = laad_eenheden()
+    if df.empty:
+        st.info("Nog geen eenheden.")
+    else:
+        for _, row in df.iterrows():
+            col_info, col_del = st.columns([12, 1])
+            with col_info:
+                st.markdown(
+                    f"<div class='uren-kaart'>"
+                    f"<div class='uren-kaart-title'>{row['naam']}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            with col_del:
+                st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                if st.button("🗑️", key=f"del_eenheid_{row['id']}", help="Verwijderen"):
+                    verwijder_eenheid(row["id"])
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
