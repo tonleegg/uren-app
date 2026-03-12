@@ -131,10 +131,10 @@ def get_client():
 
 @st.cache_data(ttl=60)
 def laad_klanten() -> pd.DataFrame:
-    res = get_client().table("klanten").select("*").order("naam").execute()
+    res = get_client().table("klanten").select("*").order("bedrijfsnaam").execute()
     if res.data:
         return pd.DataFrame(res.data)
-    return pd.DataFrame(columns=["id", "naam", "adres", "postcode", "stad", "land"])
+    return pd.DataFrame(columns=["id", "bedrijfsnaam", "adres", "postcode", "stad", "land"])
 
 
 @st.cache_data(ttl=60)
@@ -310,7 +310,7 @@ if pagina == "Urenregistratie":
     elif df_activiteiten.empty:
         st.warning("Voeg eerst een activiteit toe via 'Activiteiten'.")
     else:
-        klant_namen = df_klanten["naam"].tolist()
+        klant_namen = df_klanten["bedrijfsnaam"].tolist()
         act_namen = df_activiteiten["naam"].tolist()
 
         st.markdown("### Nieuwe uren invoeren")
@@ -342,7 +342,7 @@ if pagina == "Urenregistratie":
         mv = EENHEID_MEERVOUD.get(eenheid, eenheid + "en")
 
         # Opdrachten voor gekozen klant
-        klant_row = df_klanten[df_klanten["naam"] == klant_naam].iloc[0]
+        klant_row = df_klanten[df_klanten["bedrijfsnaam"] == klant_naam].iloc[0]
         klant_id = int(klant_row["id"])
         actieve_opdrachten = (
             df_opdrachten[
@@ -408,7 +408,7 @@ if pagina == "Urenregistratie":
     if df_uren.empty:
         st.info("Nog geen uren geregistreerd.")
     else:
-        df_k = laad_klanten()[["id", "naam"]].rename(columns={"id": "klant_id", "naam": "klant_naam"})
+        df_k = laad_klanten()[["id", "bedrijfsnaam"]].rename(columns={"id": "klant_id", "bedrijfsnaam": "klant_naam"})
         df_a = (
             laad_activiteiten()[["id", "naam", "eenheid"]]
             .rename(columns={"id": "activiteit_id", "naam": "activiteit_naam"})
@@ -496,7 +496,7 @@ elif pagina == "Klanten":
                 st.error("Bedrijfsnaam is verplicht.")
             else:
                 voeg_klant_toe({
-                    "naam": naam.strip(),
+                    "bedrijfsnaam": naam.strip(),
                     "adres": adres.strip(),
                     "postcode": postcode.strip(),
                     "stad": stad.strip(),
@@ -520,7 +520,7 @@ elif pagina == "Klanten":
                 adres_str = " &nbsp;·&nbsp; ".join(d for d in adres_delen if d)
                 st.markdown(
                     f"<div class='uren-kaart'>"
-                    f"<div class='uren-kaart-title'>{row['naam']}</div>"
+                    f"<div class='uren-kaart-title'>{row['bedrijfsnaam']}</div>"
                     f"<div class='uren-kaart-meta'>{adres_str}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
@@ -543,7 +543,7 @@ elif pagina == "Contactpersonen":
     if df_klanten.empty:
         st.warning("Voeg eerst een klant toe via 'Klanten'.")
     else:
-        klant_namen = df_klanten["naam"].tolist()
+        klant_namen = df_klanten["bedrijfsnaam"].tolist()
 
         with st.expander("➕ Nieuwe contactpersoon toevoegen"):
             with st.form("contact_formulier", clear_on_submit=True):
@@ -561,7 +561,7 @@ elif pagina == "Contactpersonen":
                 if not naam.strip():
                     st.error("Naam is verplicht.")
                 else:
-                    klant_id = int(df_klanten[df_klanten["naam"] == klant_keuze].iloc[0]["id"])
+                    klant_id = int(df_klanten[df_klanten["bedrijfsnaam"] == klant_keuze].iloc[0]["id"])
                     voeg_contactpersoon_toe({
                         "klant_id": klant_id,
                         "naam": naam.strip(),
@@ -579,7 +579,7 @@ elif pagina == "Contactpersonen":
             df_cp["klant_id"] = pd.to_numeric(df_cp["klant_id"], errors="coerce")
             df_klanten["id"] = pd.to_numeric(df_klanten["id"], errors="coerce")
             df_cp = df_cp.merge(
-                df_klanten[["id", "naam"]].rename(columns={"id": "klant_id", "naam": "klant_naam"}),
+                df_klanten[["id", "bedrijfsnaam"]].rename(columns={"id": "klant_id", "bedrijfsnaam": "klant_naam"}),
                 on="klant_id",
                 how="left",
             )
@@ -672,7 +672,7 @@ elif pagina == "Opdrachten":
     if df_klanten.empty:
         st.warning("Voeg eerst een klant toe via 'Klanten'.")
     else:
-        klant_namen = df_klanten["naam"].tolist()
+        klant_namen = df_klanten["bedrijfsnaam"].tolist()
 
         with st.expander("➕ Nieuwe opdracht toevoegen"):
             with st.form("opdracht_formulier", clear_on_submit=True):
@@ -691,7 +691,7 @@ elif pagina == "Opdrachten":
                 if not projectcode.strip() or not omschrijving.strip():
                     st.error("Projectcode en omschrijving zijn verplicht.")
                 else:
-                    klant_id = int(df_klanten[df_klanten["naam"] == klant_keuze].iloc[0]["id"])
+                    klant_id = int(df_klanten[df_klanten["bedrijfsnaam"] == klant_keuze].iloc[0]["id"])
                     voeg_opdracht_toe({
                         "klant_id": klant_id,
                         "projectcode": projectcode.strip(),
@@ -710,7 +710,7 @@ elif pagina == "Opdrachten":
             df["klant_id"] = pd.to_numeric(df["klant_id"], errors="coerce")
             df_klanten["id"] = pd.to_numeric(df_klanten["id"], errors="coerce")
             df = df.merge(
-                df_klanten[["id", "naam"]].rename(columns={"id": "klant_id", "naam": "klant_naam"}),
+                df_klanten[["id", "bedrijfsnaam"]].rename(columns={"id": "klant_id", "bedrijfsnaam": "klant_naam"}),
                 on="klant_id",
                 how="left",
             )
