@@ -9,6 +9,7 @@ LANDEN = sorted([c.name for c in pycountry.countries])
 STANDAARD_LAND = "Netherlands"
 LOGO_PAD = "daauw kl.png"
 OPDRACHT_STATUSSEN = ["Actief", "Aangevraagd", "Gepauzeerd", "Afgerond"]
+DEV_BYPASS_LOGIN = True  # Zet op False om login weer in te schakelen
 EENHEID_MEERVOUD = {"uur": "uren", "dag": "dagen", "week": "weken", "stuk": "stuks", "project": "projecten"}
 
 # ── CSS ────────────────────────────────────────────────────────────────────────
@@ -255,6 +256,11 @@ st.set_page_config(page_title="daauw – Urenregistratie", page_icon="⏱️", l
 st.markdown(CSS, unsafe_allow_html=True)
 
 # ── Login ──────────────────────────────────────────────────────────────────────
+if DEV_BYPASS_LOGIN and not st.session_state.get("ingelogd"):
+    st.session_state["ingelogd"] = True
+    st.session_state["gebruiker_naam"] = "Ontwikkelaar"
+    st.session_state["gebruiker_email"] = "dev@localhost"
+
 if not st.session_state.get("ingelogd"):
     _, col, _ = st.columns([1, 2, 1])
     with col:
