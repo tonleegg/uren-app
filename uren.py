@@ -264,15 +264,7 @@ if not st.session_state.get("ingelogd"):
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    try:
-        st.image(LOGO_PAD, width=180, use_container_width=False)
-    except Exception:
-        pass
     st.markdown(f"**{st.session_state['gebruiker_naam']}**")
-    st.markdown(
-        f"<small style='color:#7f8c8d'>{st.session_state['gebruiker_email']}</small>",
-        unsafe_allow_html=True,
-    )
     st.divider()
     pagina = st.radio(
         "Navigatie",
