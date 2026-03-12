@@ -162,10 +162,10 @@ def laad_opdrachten() -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def laad_eenheden() -> pd.DataFrame:
-    res = get_client().table("eenheden").select("*").order("naam").execute()
+    res = get_client().table("eenheden").select("*").order("omschrijving").execute()
     if res.data:
         return pd.DataFrame(res.data)
-    return pd.DataFrame(columns=["id", "naam"])
+    return pd.DataFrame(columns=["id", "omschrijving"])
 
 
 @st.cache_data(ttl=60)
@@ -241,7 +241,7 @@ def verwijder_opdracht(rij_id: int):
 
 
 def voeg_eenheid_toe(naam: str):
-    get_client().table("eenheden").insert({"naam": naam}).execute()
+    get_client().table("eenheden").insert({"omschrijving": naam}).execute()
     laad_eenheden.clear()
 
 
@@ -623,7 +623,7 @@ elif pagina == "Activiteiten":
     st.title("Activiteiten")
 
     df_eenheden = laad_eenheden()
-    eenheid_opties = df_eenheden["naam"].tolist() if not df_eenheden.empty else []
+    eenheid_opties = df_eenheden["omschrijving"].tolist() if not df_eenheden.empty else []
 
     with st.expander("➕ Nieuwe activiteit toevoegen"):
         if not eenheid_opties:
@@ -790,7 +790,7 @@ elif pagina == "Eenheden":
             with col_info:
                 st.markdown(
                     f"<div class='uren-kaart'>"
-                    f"<div class='uren-kaart-title'>{row['naam']}</div>"
+                    f"<div class='uren-kaart-title'>{row['omschrijving']}</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
