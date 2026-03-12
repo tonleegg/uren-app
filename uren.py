@@ -134,23 +134,23 @@ def laad_klanten() -> pd.DataFrame:
     res = get_client().table("klanten").select("*").order("bedrijfsnaam").execute()
     if res.data:
         return pd.DataFrame(res.data)
-    return pd.DataFrame(columns=["id", "bedrijfsnaam", "adres", "postcode", "stad", "land"])
+    return pd.DataFrame(columns=["id", "bedrijfsnaam", "straat", "postcode", "plaats", "land"])
 
 
 @st.cache_data(ttl=60)
 def laad_contactpersonen() -> pd.DataFrame:
-    res = get_client().table("contactpersonen").select("*").order("naam").execute()
+    res = get_client().table("contactpersonen").select("*").order("voornaam").execute()
     if res.data:
         return pd.DataFrame(res.data)
-    return pd.DataFrame(columns=["id", "klant_id", "naam", "functie", "email", "telefoon"])
+    return pd.DataFrame(columns=["id", "klant_id", "voornaam", "achternaam", "email", "telefoonnummer"])
 
 
 @st.cache_data(ttl=60)
 def laad_activiteiten() -> pd.DataFrame:
-    res = get_client().table("activiteiten").select("*").order("naam").execute()
+    res = get_client().table("activiteiten").select("*").order("omschrijving").execute()
     if res.data:
         return pd.DataFrame(res.data)
-    return pd.DataFrame(columns=["id", "naam", "omschrijving", "eenheid", "tarief"])
+    return pd.DataFrame(columns=["id", "omschrijving", "eenheid", "standaard_tarief"])
 
 
 @st.cache_data(ttl=60)
@@ -166,7 +166,7 @@ def laad_uren() -> pd.DataFrame:
     res = get_client().table("uren").select("*").order("datum", desc=True).execute()
     if res.data:
         return pd.DataFrame(res.data)
-    return pd.DataFrame(columns=["id", "klant_id", "opdracht_id", "activiteit_id", "datum", "eenheden", "tarief"])
+    return pd.DataFrame(columns=["id", "klant_id", "opdracht_id", "activiteit_id", "datum", "aantal_eenheden", "eenheidstarief"])
 
 
 def login(email: str, wachtwoord: str):
@@ -183,25 +183,21 @@ def _ts():
 
 
 def voeg_klant_toe(rij: dict):
-    rij["timestamp"] = _ts()
     get_client().table("klanten").insert(rij).execute()
     laad_klanten.clear()
 
 
 def voeg_contactpersoon_toe(rij: dict):
-    rij["timestamp"] = _ts()
     get_client().table("contactpersonen").insert(rij).execute()
     laad_contactpersonen.clear()
 
 
 def voeg_activiteit_toe(rij: dict):
-    rij["timestamp"] = _ts()
     get_client().table("activiteiten").insert(rij).execute()
     laad_activiteiten.clear()
 
 
 def voeg_opdracht_toe(rij: dict):
-    rij["timestamp"] = _ts()
     get_client().table("opdrachten").insert(rij).execute()
     laad_opdrachten.clear()
 
@@ -311,7 +307,7 @@ if pagina == "Urenregistratie":
         st.warning("Voeg eerst een activiteit toe via 'Activiteiten'.")
     else:
         klant_namen = df_klanten["bedrijfsnaam"].tolist()
-        act_namen = df_activiteiten["naam"].tolist()
+        act_namen = df_activiteiten["omschrijving"].tolist()
 
         st.markdown("### Nieuwe uren invoeren")
 
@@ -322,12 +318,12 @@ if pagina == "Urenregistratie":
         with col2:
             act_naam = st.selectbox("Activiteit *", act_namen, key="uren_act_sb")
 
-        def _get_tarief(naam):
-            r = df_activiteiten[df_activiteiten["naam"] == naam]
-            return float(r.iloc[0]["tarief"]) if not r.empty else 0.0
+        def _get_tarief(omschrijving):
+            r = df_activiteiten[df_activiteiten["omschrijving"] == omschrijving]
+            return float(r.iloc[0]["standaard_tarief"]) if not r.empty else 0.0
 
-        def _get_eenheid(naam):
-            r = df_activiteiten[df_activiteiten["naam"] == naam]
+        def _get_eenheid(omschrijving):
+            r = df_activiteiten[df_activiteiten["omschrijving"] == omschrijving]
             return r.iloc[0]["eenheid"] if not r.empty else "uur"
 
         # Auto-fill tarief wanneer activiteit wijzigt
@@ -388,14 +384,14 @@ if pagina == "Urenregistratie":
                     if not match.empty:
                         opdracht_id = int(match.iloc[0]["id"])
 
-                act_id = int(df_activiteiten[df_activiteiten["naam"] == act_naam].iloc[0]["id"])
+                act_id = int(df_activiteiten[df_activiteiten["omschrijving"] == act_naam].iloc[0]["id"])
                 sla_uren_op({
                     "klant_id": klant_id,
                     "opdracht_id": opdracht_id,
                     "activiteit_id": act_id,
                     "datum": datum.strftime("%Y-%m-%d"),
-                    "eenheden": eenheden,
-                    "tarief": tarief,
+                    "aantal_eenheden": eenheden,
+                    "eenheidstarief": tarief,
                 })
                 st.success(f"Opgeslagen: {eenheden:.1f} {mv} voor {klant_naam}")
                 st.rerun()
@@ -410,8 +406,8 @@ if pagina == "Urenregistratie":
     else:
         df_k = laad_klanten()[["id", "bedrijfsnaam"]].rename(columns={"id": "klant_id", "bedrijfsnaam": "klant_naam"})
         df_a = (
-            laad_activiteiten()[["id", "naam", "eenheid"]]
-            .rename(columns={"id": "activiteit_id", "naam": "activiteit_naam"})
+            laad_activiteiten()[["id", "omschrijving", "eenheid"]]
+            .rename(columns={"id": "activiteit_id", "omschrijving": "activiteit_naam"})
         )
         df_o = (
             laad_opdrachten()[["id", "projectcode"]]
@@ -429,9 +425,9 @@ if pagina == "Urenregistratie":
             .merge(df_a, on="activiteit_id", how="left")
             .merge(df_o, on="opdracht_id", how="left")
         )
-        df_view["eenheden"] = pd.to_numeric(df_view["eenheden"], errors="coerce")
-        df_view["tarief"] = pd.to_numeric(df_view["tarief"], errors="coerce")
-        df_view["totaal"] = df_view["eenheden"] * df_view["tarief"]
+        df_view["aantal_eenheden"] = pd.to_numeric(df_view["aantal_eenheden"], errors="coerce")
+        df_view["eenheidstarief"] = pd.to_numeric(df_view["eenheidstarief"], errors="coerce")
+        df_view["totaal"] = df_view["aantal_eenheden"] * df_view["eenheidstarief"]
 
         for klant, kdf in df_view.groupby("klant_naam"):
             st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
@@ -451,7 +447,7 @@ if pagina == "Urenregistratie":
                                 <span class='uren-badge'>€ {row['totaal']:.2f}</span>
                             </div>
                             <div class='uren-kaart-sub'>{row['activiteit_naam']}</div>
-                            <div class='uren-kaart-meta'>{row['eenheden']:.1f} {mv_row} &nbsp;·&nbsp; € {row['tarief']:.2f}/{eh}</div>
+                            <div class='uren-kaart-meta'>{row['aantal_eenheden']:.1f} {mv_row} &nbsp;·&nbsp; € {row['eenheidstarief']:.2f}/{eh}</div>
                         </div>""",
                         unsafe_allow_html=True,
                     )
@@ -462,7 +458,7 @@ if pagina == "Urenregistratie":
                         st.rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
 
-            tot_eenheden = kdf["eenheden"].sum()
+            tot_eenheden = kdf["aantal_eenheden"].sum()
             tot_bedrag = kdf["totaal"].sum()
             st.markdown(
                 f"<div class='totaal-rij'>Totaal {klant}: "
@@ -484,8 +480,8 @@ elif pagina == "Klanten":
             naam = st.text_input("Bedrijfsnaam *")
             col1, col2 = st.columns(2)
             with col1:
-                adres = st.text_input("Adres")
-                stad = st.text_input("Stad")
+                straat = st.text_input("Straat")
+                plaats = st.text_input("Plaats")
             with col2:
                 postcode = st.text_input("Postcode")
                 land = st.selectbox("Land", LANDEN, index=LANDEN.index(STANDAARD_LAND))
@@ -497,9 +493,9 @@ elif pagina == "Klanten":
             else:
                 voeg_klant_toe({
                     "bedrijfsnaam": naam.strip(),
-                    "adres": adres.strip(),
+                    "straat": straat.strip(),
                     "postcode": postcode.strip(),
-                    "stad": stad.strip(),
+                    "plaats": plaats.strip(),
                     "land": land,
                 })
                 st.success(f"Klant '{naam.strip()}' toegevoegd.")
@@ -513,8 +509,8 @@ elif pagina == "Klanten":
             col_info, col_del = st.columns([12, 1])
             with col_info:
                 adres_delen = [
-                    row.get("adres", ""),
-                    " ".join(filter(None, [row.get("postcode", ""), row.get("stad", "")])),
+                    row.get("straat", ""),
+                    " ".join(filter(None, [row.get("postcode", ""), row.get("plaats", "")])),
                     row.get("land", ""),
                 ]
                 adres_str = " &nbsp;·&nbsp; ".join(d for d in adres_delen if d)
@@ -550,26 +546,26 @@ elif pagina == "Contactpersonen":
                 klant_keuze = st.selectbox("Klant *", klant_namen)
                 col1, col2 = st.columns(2)
                 with col1:
-                    naam = st.text_input("Naam *")
-                    email = st.text_input("E-mailadres")
+                    voornaam = st.text_input("Voornaam *")
+                    achternaam = st.text_input("Achternaam")
                 with col2:
-                    functie = st.text_input("Functie")
-                    telefoon = st.text_input("Telefoon")
+                    email = st.text_input("E-mailadres")
+                    telefoonnummer = st.text_input("Telefoonnummer")
                 opslaan = st.form_submit_button("Contactpersoon toevoegen", type="primary")
 
             if opslaan:
-                if not naam.strip():
-                    st.error("Naam is verplicht.")
+                if not voornaam.strip():
+                    st.error("Voornaam is verplicht.")
                 else:
                     klant_id = int(df_klanten[df_klanten["bedrijfsnaam"] == klant_keuze].iloc[0]["id"])
                     voeg_contactpersoon_toe({
                         "klant_id": klant_id,
-                        "naam": naam.strip(),
-                        "functie": functie.strip(),
+                        "voornaam": voornaam.strip(),
+                        "achternaam": achternaam.strip(),
                         "email": email.strip(),
-                        "telefoon": telefoon.strip(),
+                        "telefoonnummer": telefoonnummer.strip(),
                     })
-                    st.success(f"Contactpersoon '{naam.strip()}' toegevoegd.")
+                    st.success(f"Contactpersoon '{voornaam.strip()}' toegevoegd.")
                     st.rerun()
 
         df_cp = laad_contactpersonen()
@@ -589,12 +585,13 @@ elif pagina == "Contactpersonen":
                 for _, row in kdf.iterrows():
                     col_info, col_del = st.columns([12, 1])
                     with col_info:
+                        volledige_naam = " ".join(filter(None, [row.get("voornaam", ""), row.get("achternaam", "")]))
                         details = " &nbsp;·&nbsp; ".join(
-                            filter(None, [row.get("functie", ""), row.get("email", ""), row.get("telefoon", "")])
+                            filter(None, [row.get("email", ""), row.get("telefoonnummer", "")])
                         )
                         st.markdown(
                             f"<div class='uren-kaart'>"
-                            f"<div class='uren-kaart-title'>{row['naam']}</div>"
+                            f"<div class='uren-kaart-title'>{volledige_naam}</div>"
                             f"<div class='uren-kaart-meta'>{details}</div>"
                             f"</div>",
                             unsafe_allow_html=True,
@@ -618,24 +615,22 @@ elif pagina == "Activiteiten":
         with st.form("activiteit_formulier", clear_on_submit=True):
             col1, col2 = st.columns(2)
             with col1:
-                naam = st.text_input("Naam *")
+                omschrijving = st.text_input("Omschrijving *")
                 eenheid = st.selectbox("Eenheid", EENHEDEN)
             with col2:
-                omschrijving = st.text_input("Omschrijving")
-                tarief = st.number_input("Standaard tarief (€)", min_value=0.0, step=1.0, format="%.2f")
+                standaard_tarief = st.number_input("Standaard tarief (€)", min_value=0.0, step=1.0, format="%.2f")
             opslaan = st.form_submit_button("Activiteit toevoegen", type="primary")
 
         if opslaan:
-            if not naam.strip():
-                st.error("Naam is verplicht.")
+            if not omschrijving.strip():
+                st.error("Omschrijving is verplicht.")
             else:
                 voeg_activiteit_toe({
-                    "naam": naam.strip(),
                     "omschrijving": omschrijving.strip(),
                     "eenheid": eenheid,
-                    "tarief": tarief,
+                    "standaard_tarief": standaard_tarief,
                 })
-                st.success(f"Activiteit '{naam.strip()}' toegevoegd.")
+                st.success(f"Activiteit '{omschrijving.strip()}' toegevoegd.")
                 st.rerun()
 
     df = laad_activiteiten()
@@ -648,9 +643,8 @@ elif pagina == "Activiteiten":
                 eh = row.get("eenheid", "eenheid")
                 st.markdown(
                     f"<div class='uren-kaart'>"
-                    f"<div class='uren-kaart-title'>{row['naam']}"
-                    f"<span class='uren-badge'>€ {float(row['tarief']):.2f}/{eh}</span></div>"
-                    f"<div class='uren-kaart-meta'>{row.get('omschrijving', '')}</div>"
+                    f"<div class='uren-kaart-title'>{row['omschrijving']}"
+                    f"<span class='uren-badge'>€ {float(row['standaard_tarief']):.2f}/{eh}</span></div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
