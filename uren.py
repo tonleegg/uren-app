@@ -251,6 +251,31 @@ def verwijder_eenheid(rij_id):
     laad_eenheden.clear()
 
 
+def bewerk_klant(rij_id, rij: dict):
+    get_client().table("klanten").update(rij).eq("id", rij_id).execute()
+    laad_klanten.clear()
+
+
+def bewerk_contactpersoon(rij_id, rij: dict):
+    get_client().table("contactpersonen").update(rij).eq("id", rij_id).execute()
+    laad_contactpersonen.clear()
+
+
+def bewerk_activiteit(rij_id, rij: dict):
+    get_client().table("activiteiten").update(rij).eq("id", rij_id).execute()
+    laad_activiteiten.clear()
+
+
+def bewerk_opdracht(rij_id, rij: dict):
+    get_client().table("opdrachten").update(rij).eq("id", rij_id).execute()
+    laad_opdrachten.clear()
+
+
+def bewerk_eenheid(rij_id, rij: dict):
+    get_client().table("eenheden").update(rij).eq("id", rij_id).execute()
+    laad_eenheden.clear()
+
+
 # ── Pagina-config ──────────────────────────────────────────────────────────────
 st.set_page_config(page_title="daauw – Urenregistratie", page_icon="⏱️", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
@@ -522,8 +547,48 @@ elif pagina == "Klanten":
     if df.empty:
         st.info("Nog geen klanten.")
     else:
+        bewerk_id = st.session_state.get("bewerk_klant_id")
+        if bewerk_id:
+            rij_b = df[df["id"].astype(str) == str(bewerk_id)]
+            if not rij_b.empty:
+                rij_b = rij_b.iloc[0]
+                st.markdown("### Klant bewerken")
+                with st.form("bewerk_klant_formulier"):
+                    naam_b = st.text_input("Bedrijfsnaam *", value=rij_b.get("bedrijfsnaam", "") or "")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        straat_b = st.text_input("Straat", value=rij_b.get("straat", "") or "")
+                        plaats_b = st.text_input("Plaats", value=rij_b.get("plaats", "") or "")
+                    with col2:
+                        postcode_b = st.text_input("Postcode", value=rij_b.get("postcode", "") or "")
+                        huidig_land = rij_b.get("land", STANDAARD_LAND) or STANDAARD_LAND
+                        land_idx = LANDEN.index(huidig_land) if huidig_land in LANDEN else LANDEN.index(STANDAARD_LAND)
+                        land_b = st.selectbox("Land", LANDEN, index=land_idx)
+                    col_sv, col_ann = st.columns(2)
+                    with col_sv:
+                        opslaan_b = st.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
+                    with col_ann:
+                        annuleren_b = st.form_submit_button("Annuleren", use_container_width=True)
+                if opslaan_b:
+                    if not naam_b.strip():
+                        st.error("Bedrijfsnaam is verplicht.")
+                    else:
+                        bewerk_klant(str(bewerk_id), {
+                            "bedrijfsnaam": naam_b.strip(),
+                            "straat": straat_b.strip(),
+                            "postcode": postcode_b.strip(),
+                            "plaats": plaats_b.strip(),
+                            "land": land_b,
+                        })
+                        del st.session_state["bewerk_klant_id"]
+                        st.success("Klant bijgewerkt.")
+                        st.rerun()
+                if annuleren_b:
+                    del st.session_state["bewerk_klant_id"]
+                    st.rerun()
+
         for _, row in df.iterrows():
-            col_info, col_del = st.columns([12, 1])
+            col_info, col_edit, col_del = st.columns([11, 1, 1])
             with col_info:
                 adres_delen = [
                     row.get("straat", ""),
@@ -538,6 +603,12 @@ elif pagina == "Klanten":
                     f"</div>",
                     unsafe_allow_html=True,
                 )
+            with col_edit:
+                st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                if st.button("✏️", key=f"edit_klant_{row['id']}", help="Bewerken"):
+                    st.session_state["bewerk_klant_id"] = row["id"]
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
             with col_del:
                 st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                 if st.button("🗑️", key=f"del_klant_{row['id']}", help="Verwijderen"):
@@ -597,10 +668,51 @@ elif pagina == "Contactpersonen":
                 how="left",
             )
 
+            bewerk_cp_id = st.session_state.get("bewerk_cp_id")
+            if bewerk_cp_id:
+                rij_b = df_cp[df_cp["id"].astype(str) == str(bewerk_cp_id)]
+                if not rij_b.empty:
+                    rij_b = rij_b.iloc[0]
+                    st.markdown("### Contactpersoon bewerken")
+                    with st.form("bewerk_cp_formulier"):
+                        huidig_klant = rij_b.get("klant_naam", klant_namen[0])
+                        klant_idx = klant_namen.index(huidig_klant) if huidig_klant in klant_namen else 0
+                        klant_b = st.selectbox("Klant *", klant_namen, index=klant_idx)
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            voornaam_b = st.text_input("Voornaam *", value=rij_b.get("voornaam", "") or "")
+                            achternaam_b = st.text_input("Achternaam", value=rij_b.get("achternaam", "") or "")
+                        with col2:
+                            email_b = st.text_input("E-mailadres", value=rij_b.get("email", "") or "")
+                            tel_b = st.text_input("Telefoonnummer", value=rij_b.get("telefoonnummer", "") or "")
+                        col_sv, col_ann = st.columns(2)
+                        with col_sv:
+                            opslaan_b = st.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
+                        with col_ann:
+                            annuleren_b = st.form_submit_button("Annuleren", use_container_width=True)
+                    if opslaan_b:
+                        if not voornaam_b.strip():
+                            st.error("Voornaam is verplicht.")
+                        else:
+                            klant_id_b = str(df_klanten[df_klanten["bedrijfsnaam"] == klant_b].iloc[0]["id"])
+                            bewerk_contactpersoon(str(bewerk_cp_id), {
+                                "klant_id": klant_id_b,
+                                "voornaam": voornaam_b.strip(),
+                                "achternaam": achternaam_b.strip(),
+                                "email": email_b.strip(),
+                                "telefoonnummer": tel_b.strip(),
+                            })
+                            del st.session_state["bewerk_cp_id"]
+                            st.success("Contactpersoon bijgewerkt.")
+                            st.rerun()
+                    if annuleren_b:
+                        del st.session_state["bewerk_cp_id"]
+                        st.rerun()
+
             for klant, kdf in df_cp.groupby("klant_naam"):
                 st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
                 for _, row in kdf.iterrows():
-                    col_info, col_del = st.columns([12, 1])
+                    col_info, col_edit, col_del = st.columns([11, 1, 1])
                     with col_info:
                         volledige_naam = " ".join(filter(None, [row.get("voornaam", ""), row.get("achternaam", "")]))
                         details = " &nbsp;·&nbsp; ".join(
@@ -613,6 +725,12 @@ elif pagina == "Contactpersonen":
                             f"</div>",
                             unsafe_allow_html=True,
                         )
+                    with col_edit:
+                        st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                        if st.button("✏️", key=f"edit_cp_{row['id']}", help="Bewerken"):
+                            st.session_state["bewerk_cp_id"] = row["id"]
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
                     with col_del:
                         st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                         if st.button("🗑️", key=f"del_cp_{row['id']}", help="Verwijderen"):
@@ -660,8 +778,45 @@ elif pagina == "Activiteiten":
     if df.empty:
         st.info("Nog geen activiteiten.")
     else:
+        bewerk_act_id = st.session_state.get("bewerk_act_id")
+        if bewerk_act_id:
+            rij_b = df[df["id"].astype(str) == str(bewerk_act_id)]
+            if not rij_b.empty:
+                rij_b = rij_b.iloc[0]
+                st.markdown("### Activiteit bewerken")
+                with st.form("bewerk_act_formulier"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        omschr_b = st.text_input("Omschrijving *", value=rij_b.get("omschrijving", "") or "")
+                        huidig_eh = rij_b.get("eenheid", eenheid_opties[0] if eenheid_opties else "")
+                        eh_idx = eenheid_opties.index(huidig_eh) if huidig_eh in eenheid_opties else 0
+                        eenheid_b = st.selectbox("Eenheid", eenheid_opties, index=eh_idx)
+                    with col2:
+                        tarief_b = st.number_input("Standaard tarief (€)", min_value=0.0, step=1.0, format="%.2f",
+                                                   value=float(rij_b.get("standaard_tarief") or 0.0))
+                    col_sv, col_ann = st.columns(2)
+                    with col_sv:
+                        opslaan_b = st.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
+                    with col_ann:
+                        annuleren_b = st.form_submit_button("Annuleren", use_container_width=True)
+                if opslaan_b:
+                    if not omschr_b.strip():
+                        st.error("Omschrijving is verplicht.")
+                    else:
+                        bewerk_activiteit(str(bewerk_act_id), {
+                            "omschrijving": omschr_b.strip(),
+                            "eenheid": eenheid_b,
+                            "standaard_tarief": tarief_b,
+                        })
+                        del st.session_state["bewerk_act_id"]
+                        st.success("Activiteit bijgewerkt.")
+                        st.rerun()
+                if annuleren_b:
+                    del st.session_state["bewerk_act_id"]
+                    st.rerun()
+
         for _, row in df.iterrows():
-            col_info, col_del = st.columns([12, 1])
+            col_info, col_edit, col_del = st.columns([11, 1, 1])
             with col_info:
                 eh = row.get("eenheid", "eenheid")
                 st.markdown(
@@ -671,6 +826,12 @@ elif pagina == "Activiteiten":
                     f"</div>",
                     unsafe_allow_html=True,
                 )
+            with col_edit:
+                st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                if st.button("✏️", key=f"edit_act_{row['id']}", help="Bewerken"):
+                    st.session_state["bewerk_act_id"] = row["id"]
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
             with col_del:
                 st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                 if st.button("🗑️", key=f"del_act_{row['id']}", help="Verwijderen"):
@@ -739,10 +900,62 @@ elif pagina == "Opdrachten":
                 "Afgerond": "badge-grijs",
             }
 
+            bewerk_opr_id = st.session_state.get("bewerk_opr_id")
+            if bewerk_opr_id:
+                rij_b = df[df["id"].astype(str) == str(bewerk_opr_id)]
+                if not rij_b.empty:
+                    rij_b = rij_b.iloc[0]
+                    st.markdown("### Opdracht bewerken")
+                    with st.form("bewerk_opr_formulier"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            huidig_klant = rij_b.get("klant_naam", klant_namen[0])
+                            klant_idx = klant_namen.index(huidig_klant) if huidig_klant in klant_namen else 0
+                            klant_b = st.selectbox("Klant *", klant_namen, index=klant_idx)
+                            pc_b = st.text_input("Projectcode *", value=rij_b.get("projectcode", "") or "")
+                            try:
+                                sd_val = date.fromisoformat(str(rij_b["startdatum"])) if rij_b.get("startdatum") else date.today()
+                            except Exception:
+                                sd_val = date.today()
+                            sd_b = st.date_input("Startdatum", value=sd_val)
+                        with col2:
+                            omschr_b = st.text_input("Omschrijving *", value=rij_b.get("omschrijving", "") or "")
+                            stat_idx = OPDRACHT_STATUSSEN.index(rij_b["status"]) if rij_b.get("status") in OPDRACHT_STATUSSEN else 0
+                            status_b = st.selectbox("Status", OPDRACHT_STATUSSEN, index=stat_idx)
+                            try:
+                                ed_val = date.fromisoformat(str(rij_b["einddatum"])) if rij_b.get("einddatum") else None
+                            except Exception:
+                                ed_val = None
+                            ed_b = st.date_input("Einddatum (optioneel)", value=ed_val)
+                        col_sv, col_ann = st.columns(2)
+                        with col_sv:
+                            opslaan_b = st.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
+                        with col_ann:
+                            annuleren_b = st.form_submit_button("Annuleren", use_container_width=True)
+                    if opslaan_b:
+                        if not pc_b.strip() or not omschr_b.strip():
+                            st.error("Projectcode en omschrijving zijn verplicht.")
+                        else:
+                            klant_id_b = str(df_klanten[df_klanten["bedrijfsnaam"] == klant_b].iloc[0]["id"])
+                            bewerk_opdracht(str(bewerk_opr_id), {
+                                "klant_id": klant_id_b,
+                                "projectcode": pc_b.strip(),
+                                "omschrijving": omschr_b.strip(),
+                                "startdatum": sd_b.strftime("%Y-%m-%d"),
+                                "einddatum": ed_b.strftime("%Y-%m-%d") if ed_b else None,
+                                "status": status_b,
+                            })
+                            del st.session_state["bewerk_opr_id"]
+                            st.success("Opdracht bijgewerkt.")
+                            st.rerun()
+                    if annuleren_b:
+                        del st.session_state["bewerk_opr_id"]
+                        st.rerun()
+
             for klant, kdf in df.groupby("klant_naam"):
                 st.markdown(f"<div class='uren-sectie-label'>{klant}</div>", unsafe_allow_html=True)
                 for _, row in kdf.iterrows():
-                    col_info, col_del = st.columns([12, 1])
+                    col_info, col_edit, col_del = st.columns([11, 1, 1])
                     with col_info:
                         datum_str = ""
                         if pd.notna(row.get("startdatum")) and row["startdatum"]:
@@ -759,6 +972,12 @@ elif pagina == "Opdrachten":
                             f"</div>",
                             unsafe_allow_html=True,
                         )
+                    with col_edit:
+                        st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                        if st.button("✏️", key=f"edit_opr_{row['id']}", help="Bewerken"):
+                            st.session_state["bewerk_opr_id"] = row["id"]
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
                     with col_del:
                         st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                         if st.button("🗑️", key=f"del_opr_{row['id']}", help="Verwijderen"):
@@ -791,8 +1010,33 @@ elif pagina == "Eenheden":
     if df.empty:
         st.info("Nog geen eenheden.")
     else:
+        bewerk_eh_id = st.session_state.get("bewerk_eh_id")
+        if bewerk_eh_id:
+            rij_b = df[df["id"].astype(str) == str(bewerk_eh_id)]
+            if not rij_b.empty:
+                rij_b = rij_b.iloc[0]
+                st.markdown("### Eenheid bewerken")
+                with st.form("bewerk_eh_formulier"):
+                    omschr_b = st.text_input("Naam *", value=rij_b.get("omschrijving", "") or "")
+                    col_sv, col_ann = st.columns(2)
+                    with col_sv:
+                        opslaan_b = st.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
+                    with col_ann:
+                        annuleren_b = st.form_submit_button("Annuleren", use_container_width=True)
+                if opslaan_b:
+                    if not omschr_b.strip():
+                        st.error("Naam is verplicht.")
+                    else:
+                        bewerk_eenheid(str(bewerk_eh_id), {"omschrijving": omschr_b.strip()})
+                        del st.session_state["bewerk_eh_id"]
+                        st.success("Eenheid bijgewerkt.")
+                        st.rerun()
+                if annuleren_b:
+                    del st.session_state["bewerk_eh_id"]
+                    st.rerun()
+
         for _, row in df.iterrows():
-            col_info, col_del = st.columns([12, 1])
+            col_info, col_edit, col_del = st.columns([11, 1, 1])
             with col_info:
                 st.markdown(
                     f"<div class='uren-kaart'>"
@@ -800,6 +1044,12 @@ elif pagina == "Eenheden":
                     f"</div>",
                     unsafe_allow_html=True,
                 )
+            with col_edit:
+                st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
+                if st.button("✏️", key=f"edit_eenheid_{row['id']}", help="Bewerken"):
+                    st.session_state["bewerk_eh_id"] = row["id"]
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
             with col_del:
                 st.markdown("<div style='padding-top:14px'>", unsafe_allow_html=True)
                 if st.button("🗑️", key=f"del_eenheid_{row['id']}", help="Verwijderen"):
