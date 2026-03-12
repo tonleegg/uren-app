@@ -1,9 +1,13 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import pycountry
 from datetime import date, datetime
 from supabase import create_client
-KOLOMMEN = ["klant", "project", "datum", "uren", "tarief"]
+
+KOLOMMEN = ["klant", "project", "datum", "uren", "tarief", "land"]
+LANDEN = sorted([c.name for c in pycountry.countries])
+STANDAARD_LAND = "Netherlands"
 
 CSS = """
 <style>
@@ -338,6 +342,8 @@ if bewerkregel is not None:
         datum_edit = st.date_input("Datum", value=pd.to_datetime(rij["datum"]).date())
         uren_edit = st.number_input("Uren", min_value=0.0, value=float(rij["uren"]), step=0.5, format="%.1f")
         tarief_edit = st.number_input("Uurtarief (€)", min_value=0.0, value=float(rij["tarief"]), step=1.0, format="%.2f")
+        huidig_land = rij["land"] if "land" in rij and rij["land"] in LANDEN else STANDAARD_LAND
+        land_edit = st.selectbox("Land", LANDEN, index=LANDEN.index(huidig_land), key=f"land_edit_{bewerkregel}")
         st.markdown(FOCUS_TRAP, unsafe_allow_html=True)
         btn_col1, btn_col2 = st.columns(2)
         opslaan_edit = btn_col1.form_submit_button("Opslaan wijzigingen", type="primary", use_container_width=True)
@@ -363,6 +369,7 @@ if bewerkregel is not None:
                 "datum": datum_edit.strftime("%Y-%m-%d"),
                 "uren": uren_edit,
                 "tarief": tarief_edit,
+                "land": land_edit,
             })
             st.session_state.bewerkregel = None
             st.success("Wijzigingen opgeslagen.")
@@ -387,6 +394,7 @@ else:
         datum = st.date_input("Datum", value=date.today())
         uren = st.number_input("Uren", min_value=0.0, step=0.5, format="%.1f")
         tarief = st.number_input("Uurtarief (€)", min_value=0.0, step=1.0, format="%.2f")
+        land = st.selectbox("Land", LANDEN, index=LANDEN.index(STANDAARD_LAND), key=f"land_nieuw_{save_cnt}")
         st.markdown(FOCUS_TRAP, unsafe_allow_html=True)
         opslaan = st.form_submit_button("Opslaan", type="primary", use_container_width=True)
 
@@ -406,6 +414,7 @@ else:
                 "datum": datum.strftime("%Y-%m-%d"),
                 "uren": uren,
                 "tarief": tarief,
+                "land": land,
             })
             st.session_state["save_cnt"] = save_cnt + 1
             st.success(f"Opgeslagen: {uren}u voor {klant}")
